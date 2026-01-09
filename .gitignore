@@ -1,0 +1,21 @@
+# Build
+Debug/
+Release/
+build/
+
+# CubeIDE
+.settings/
+*.launch
+
+# CubeMX backup
+*.bak
+*.tmp
+
+# OS
+*.swp
+.DS_Store
+
+# CMake (si utilisé)
+CMakeFiles/
+CMakeCache.txt
+cmake_install.cmake
