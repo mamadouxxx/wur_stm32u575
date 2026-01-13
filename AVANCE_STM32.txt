@@ -1,0 +1,3 @@
+AVANCE STM32 :
+	Compréhension Alimentation :
+		1er jour => nécessité d'alimenter usb-c pour mcu et micro-usb pour st-link.
