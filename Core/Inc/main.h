@@ -29,7 +29,6 @@ extern "C" {
 /* Includes ------------------------------------------------------------------*/
 #include "stm32u5xx_hal.h"
 #include "stm32u5xx_nucleo.h"
-#include <stdio.h>
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
@@ -62,6 +61,12 @@ void Error_Handler(void);
 #define BLUE_BTN_Pin GPIO_PIN_13
 #define BLUE_BTN_GPIO_Port GPIOC
 #define BLUE_BTN_EXTI_IRQn EXTI13_IRQn
+#define Lux_Pin GPIO_PIN_3
+#define Lux_GPIO_Port GPIOC
+#define OXYGEN_Pin GPIO_PIN_0
+#define OXYGEN_GPIO_Port GPIOA
+#define ONOFF_capteurs_Pin GPIO_PIN_2
+#define ONOFF_capteurs_GPIO_Port GPIOA
 #define LED_RED_Pin GPIO_PIN_2
 #define LED_RED_GPIO_Port GPIOG
 #define LED_GREEN_Pin GPIO_PIN_7
