@@ -61,8 +61,14 @@ void Error_Handler(void);
 #define BLUE_BTN_Pin GPIO_PIN_13
 #define BLUE_BTN_GPIO_Port GPIOC
 #define BLUE_BTN_EXTI_IRQn EXTI13_IRQn
+#define SCD30_SCL_Pin GPIO_PIN_0
+#define SCD30_SCL_GPIO_Port GPIOC
+#define SCD30_SDA_Pin GPIO_PIN_1
+#define SCD30_SDA_GPIO_Port GPIOC
 #define Lux_Pin GPIO_PIN_3
 #define Lux_GPIO_Port GPIOC
+#define OXYGEN_Pin GPIO_PIN_0
+#define OXYGEN_GPIO_Port GPIOA
 #define ONOFF_capteurs_Pin GPIO_PIN_2
 #define ONOFF_capteurs_GPIO_Port GPIOA
 #define LED_RED_Pin GPIO_PIN_2
