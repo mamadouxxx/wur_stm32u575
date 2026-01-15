@@ -63,8 +63,6 @@ void Error_Handler(void);
 #define BLUE_BTN_EXTI_IRQn EXTI13_IRQn
 #define Lux_Pin GPIO_PIN_3
 #define Lux_GPIO_Port GPIOC
-#define OXYGEN_Pin GPIO_PIN_0
-#define OXYGEN_GPIO_Port GPIOA
 #define ONOFF_capteurs_Pin GPIO_PIN_2
 #define ONOFF_capteurs_GPIO_Port GPIOA
 #define LED_RED_Pin GPIO_PIN_2
