@@ -135,6 +135,8 @@ int main(void)
   HAL_Delay(3000);
 
   float co2, temperature, humidity;
+  uint16_t data_ready = 0;
+
   char msg[80];
   uint32_t lux_adc = 0;
   uint32_t o2_adc = 0;
@@ -142,43 +144,51 @@ int main(void)
 
   while (1)
   {
-	  if (scd30_read_measurement_data(&co2, &temperature, &humidity) == 0)
-	      {
-	          sprintf(msg,
-	                  "CO2: %.1f ppm | T: %.2f C | RH: %.2f %%\r\n",
-	                  co2, temperature, humidity);
+	  if (scd30_get_data_ready(&data_ready) == NO_ERROR) {
+		  if (data_ready) {
+			  if (scd30_read_measurement_data(&co2, &temperature, &humidity) == 0)
+			      {
+			          sprintf(msg,
+			                  "CO2: %.1f ppm | T: %.2f C | RH: %.2f %%\r\n",
+			                  co2, temperature, humidity);
 
-	          HAL_UART_Transmit(&huart1,
-	                            (uint8_t*)msg,
-	                            strlen(msg),
-	                            HAL_MAX_DELAY);
-	      }
-	      else
-	      {
-	          char err[] = "SCD30 read error\r\n";
-	          HAL_UART_Transmit(&huart1,
-	                            (uint8_t*)err,
-	                            strlen(err),
-	                            HAL_MAX_DELAY);
-	      }
-
-	      HAL_Delay(2000); // SCD30 ≈ 2s par mesure
+			          HAL_UART_Transmit(&huart1,
+			                            (uint8_t*)msg,
+			                            strlen(msg),
+			                            HAL_MAX_DELAY);
+			      }
+			      else
+			      {
+			          char err[] = "SCD30 read error\r\n";
+			          HAL_UART_Transmit(&huart1,
+			                            (uint8_t*)err,
+			                            strlen(err),
+			                            HAL_MAX_DELAY);
+			      }
+		  }
+	  }
+	  else {
+	      char err[] = "SCD30 data ready check failed\r\n";
+	      HAL_UART_Transmit(&huart1, (uint8_t*)err, strlen(err), HAL_MAX_DELAY);
+	  }
 
 	  // Lux
-//	  HAL_ADC_Start(&hadc4);
-//	  HAL_ADC_PollForConversion(&hadc4, HAL_MAX_DELAY);
-//	  lux_adc = HAL_ADC_GetValue(&hadc4);
-//	  HAL_ADC_Stop(&hadc4);
+	  HAL_ADC_Start(&hadc4);
+	  HAL_ADC_PollForConversion(&hadc4, HAL_MAX_DELAY);
+	  lux_adc = HAL_ADC_GetValue(&hadc4);
+	  HAL_ADC_Stop(&hadc4);
 
 	  // Lire Oxygen
-//	  HAL_ADC_Start(&hadc1);
-//	  HAL_ADC_PollForConversion(&hadc1, HAL_MAX_DELAY);
-//	  o2_adc = HAL_ADC_GetValue(&hadc1);
-//	  HAL_ADC_Stop(&hadc1);
+	  HAL_ADC_Start(&hadc1);
+	  HAL_ADC_PollForConversion(&hadc1, HAL_MAX_DELAY);
+	  o2_adc = HAL_ADC_GetValue(&hadc1);
+	  HAL_ADC_Stop(&hadc1);
 
 	  // Envoyer la valeur sur UART
-//	  int len = sprintf(buffer, "Lux ADC: %lu, O2_adc: %u\r\n", lux_adc, o2_adc);
-//	  HAL_UART_Transmit(&huart1, (uint8_t*)buffer, len, HAL_MAX_DELAY);
+	  int len = sprintf(buffer, "Lux ADC: %lu, O2_adc: %u\r\n", lux_adc, o2_adc);
+	  HAL_UART_Transmit(&huart1, (uint8_t*)buffer, len, HAL_MAX_DELAY);
+
+	  HAL_Delay(2000); // SCD30 ≈ 2s par mesure
 
     /* USER CODE END WHILE */
 
