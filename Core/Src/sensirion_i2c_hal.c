@@ -33,6 +33,7 @@
 #include "sensirion_common.h"
 #include "sensirion_config.h"
 #include "stm32u5xx_hal.h"
+#include "main.h"
 
 extern I2C_HandleTypeDef hi2c3;
 

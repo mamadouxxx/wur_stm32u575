@@ -1,3 +1,14 @@
 AVANCE STM32 :
 	Compréhension Alimentation :
 		1er jour => nécessité d'alimenter usb-c pour mcu et micro-usb pour st-link.
+
+
+
+
+A gerer :
+int t = (int)(temperature * 100);
+
+sprintf(msg,
+        "T=%d.%02d C\r\n",
+        t / 100,
+        abs(t % 100));
