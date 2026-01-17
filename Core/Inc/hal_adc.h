@@ -1,28 +1,27 @@
 /*
- * telemetry.h
+ * hal_adc.h
  *
- *  Created on: 16 janv. 2026
+ *  Created on: 17 janv. 2026
  *      Author: mamadou
  */
 
-
-#ifndef TELEMETRY_H_
-#define TELEMETRY_H_
-
+#ifndef HAL_ADC_H_
+#define HAL_ADC_H_
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
 /* Includes ------------------------------------------------------------------*/
+#include <stdint.h>
 
 
-void telemetry_send_uart(void);
-
+uint32_t hal_adc4_read(void);
+uint32_t hal_adc1_read(void);
 
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif /* TELEMETRY_H_ */
+#endif /* HAL_ADC_H_ */

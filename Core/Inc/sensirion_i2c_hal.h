@@ -57,6 +57,12 @@ int16_t sensirion_i2c_hal_select_bus(uint8_t bus_idx);
 void sensirion_i2c_hal_init(void);
 
 /**
+ * to power and start scd30 board sensors
+ * defined for setting up gpio connected to the scd30 sensors board
+ */
+void hal_start_scd30_sensor();
+
+/**
  * Release all resources initialized by sensirion_i2c_hal_init().
  */
 void sensirion_i2c_hal_free(void);

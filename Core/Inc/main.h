@@ -58,9 +58,6 @@ void Error_Handler(void);
 /* USER CODE END EFP */
 
 /* Private defines -----------------------------------------------------------*/
-#define BLUE_BTN_Pin GPIO_PIN_13
-#define BLUE_BTN_GPIO_Port GPIOC
-#define BLUE_BTN_EXTI_IRQn EXTI13_IRQn
 #define SCD30_SCL_Pin GPIO_PIN_0
 #define SCD30_SCL_GPIO_Port GPIOC
 #define SCD30_SDA_Pin GPIO_PIN_1

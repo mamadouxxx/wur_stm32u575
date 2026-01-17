@@ -21,4 +21,9 @@ void o2_app_init(void);
 void o2_app_task(void);
 
 
-#endif /* INC_O2_APP_H_ */
+
+#ifdef __cplusplus
+}
+#endif
+
+#endif /* O2_APP_H_ */

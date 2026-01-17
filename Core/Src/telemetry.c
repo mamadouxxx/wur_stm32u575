@@ -7,11 +7,11 @@
 
 /* Includes ------------------------------------------------------------------*/
 #include "telemetry.h"
+#include "hal_uart.h"
 #include "sensor_data.h"
 #include <stdio.h>
 #include <string.h>
 
-extern UART_HandleTypeDef huart1;
 
 void telemetry_send_uart(void)
 {
@@ -20,8 +20,7 @@ void telemetry_send_uart(void)
     sprintf(msg,
     	"===========================================\r\n"
     	"CO2: %.1f ppm | T: %.2f C | RH: %.2f %%\r\n"
-        "Lux :%lu | O2 :%lu\r\n"
-        "===========================================\r\n",
+        "Lux :%lu | O2 :%lu\r\n",
         sensor_data_get_co2(),
         sensor_data_get_temperature(),
         sensor_data_get_humidity(),
@@ -29,5 +28,5 @@ void telemetry_send_uart(void)
         sensor_data_get_o2()
     );
 
-    HAL_UART_Transmit(&huart1, (uint8_t*)msg, strlen(msg), HAL_MAX_DELAY);
+    hal_uart1_write((uint8_t*)msg, strlen(msg));
 }

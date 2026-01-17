@@ -13,11 +13,13 @@ extern "C" {
 #endif
 
 /* Includes ------------------------------------------------------------------*/
-#include "stm32u5xx_hal.h"
-#include "stm32u5xx_nucleo.h"
-#include <stdint.h>
 
 void lux_app_init(void);
 void lux_app_task(void);
+
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* LUX_APP_H_ */

@@ -48,6 +48,7 @@ static uint8_t communication_buffer[18] = {0};
 static uint8_t _i2c_address;
 
 void scd30_init(uint8_t i2c_address) {
+	hal_start_scd30_sensor();
     _i2c_address = i2c_address;
 }
 

@@ -23,4 +23,9 @@ void scd30_app_init(void);
 void scd30_app_task(void);
 
 
+
+
+#ifdef __cplusplus
+}
+#endif
 #endif /* SCD30_APP_H_ */

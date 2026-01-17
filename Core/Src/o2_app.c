@@ -8,8 +8,7 @@
 /* Includes ------------------------------------------------------------------*/
 #include "o2_app.h"
 #include "sensor_data.h"
-
-extern ADC_HandleTypeDef hadc1;
+#include "hal_adc.h"
 
 void o2_app_init(void)
 {
@@ -18,8 +17,5 @@ void o2_app_init(void)
 
 void o2_app_task(void)
 {
-    HAL_ADC_Start(&hadc1);
-    HAL_ADC_PollForConversion(&hadc1, HAL_MAX_DELAY);
-    sensor_data_update_o2(HAL_ADC_GetValue(&hadc1));
-    HAL_ADC_Stop(&hadc1);
+    sensor_data_update_o2(hal_adc1_read());
 }

@@ -8,6 +8,10 @@
 #ifndef SENSOR_DATA_H_
 #define SENSOR_DATA_H_
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #include <stdint.h>
 
 typedef struct {
@@ -31,5 +35,9 @@ float    sensor_data_get_humidity(void);
 uint32_t sensor_data_get_o2(void);
 uint32_t sensor_data_get_lux(void);
 
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* INC_SENSOR_DATA_H_ */
