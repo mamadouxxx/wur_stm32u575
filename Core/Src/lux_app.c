@@ -15,7 +15,7 @@
  */
 void lux_app_init(void)
 {
-    // Rien à faire
+	hal_adc4_calibration();
 }
 
 /**
@@ -23,5 +23,7 @@ void lux_app_init(void)
  */
 void lux_app_task(void)
 {
-    sensor_data_update_lux(hal_adc4_read());
+    sensor_data_update_lux(
+    		hal_adc4_read()
+	);
 }

@@ -12,3 +12,73 @@ sprintf(msg,
         "T=%d.%02d C\r\n",
         t / 100,
         abs(t % 100));
+        
+maintenant je veux attaquer la mise en marche d'une antenne rf 433 mhz, config en emetteur et recepteur via switch_rf (PB3 pin), DATA (PF13 pin), FLAG (PF12) flag si bonne adresse en SPI :
+Emetteur RF 433MHz :
+TX_DATA : PA1 (DATA à transmettre)
+TX_ONOFF : PA4 (Allume ou eteint le transmetteur)
+switch_rf : PB3 (commute l'antenne sur emetteur ou recepteur)
+
+Rcepteur RF 433 MHz:
+DATA : PF13 (DATA recue en série)
+FLAG : PF12 (flag si bonne adresse)
+
+CNA (pour commande du recepteur RF) :
+SPI_MOSI : PA7 (mosi pour communication avec CNA)
+SPI_SCK : PA5 (clock du bus spi pour cna)
+
+tension CNA :
+Sortie	Tension demandée
+OUTA	500 mV
+OUTB	500 mV
+OUTC	1000 mV
+OUTD	250 mV
+OUTE	250 mV
+OUTF	800 mV
+OUTG	500 mV
+OUTH	450 mV
+
+
+TX 433 LR
+
+						 ┌──────────────┐
+						 │   MCU (STM32) │
+						 └──────┬───────┘
+							│
+						 ┌──────▼───────┐
+						 │  RF Switch   │  PE4259
+						 └───┬────┬─────┘
+						     │    │
+					┌────────────▼┐  ┌▼────────────┐
+					│ RX WuR 433   │  │ TX 433 LR   │
+					│ (OOK)        │  │ (OOK)       │
+					│ + CNA AD5568 │  │             │
+					└──────┬──────┘  └──────┬──────┘
+					       │                 │
+					       └────── Antenne 433 MHz ──────
+					       
+               
+						     SWITCH_RF (CTRL)
+						    +----------------+
+						    |                |
+						0   |                | 1
+					  +---------+                +---------+
+					  |                                   |
+					  |                                   |
+					 NC (Normally Closed)             NO (Normally Open)
+					  |                                   |
+					  |                                   |
+					 RX path                            TX path
+					  |                                   |
+					  +------------ ANTENNE --------------+
+
+              
+MOdulation OOK :
+
+	3.3V  _|‾|_|‾|_|‾|_|‾|_ ...
+	0V
+
+	MSB→LSB
+	standard radio
+
+

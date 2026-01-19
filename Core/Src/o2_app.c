@@ -12,7 +12,7 @@
 
 void o2_app_init(void)
 {
-    // Rien à faire
+	hal_adc1_calibration();
 }
 
 void o2_app_task(void)

@@ -17,4 +17,8 @@ extern "C" {
 
 void hal_uart1_write(uint8_t* data, uint16_t len);
 
+#ifdef __cplusplus
+}
+#endif
+
 #endif /* HAL_UART_C_ */

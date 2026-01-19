@@ -14,8 +14,8 @@
 void sensors_init(void)
 {
     scd30_app_init();
-    lux_app_init();
-    o2_app_init();
+//    lux_app_init();
+//    o2_app_init();
 }
 
 void sensors_task(void)
