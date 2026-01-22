@@ -78,8 +78,8 @@ void Error_Handler(void);
 #define RX_DATA_GPIO_Port GPIOF
 #define AD5568_CLR_Pin GPIO_PIN_10
 #define AD5568_CLR_GPIO_Port GPIOB
-#define LED_RED_Pin GPIO_PIN_2
-#define LED_RED_GPIO_Port GPIOG
+#define LED_ERROR_Pin GPIO_PIN_2
+#define LED_ERROR_GPIO_Port GPIOG
 #define LED_GREEN_Pin GPIO_PIN_7
 #define LED_GREEN_GPIO_Port GPIOC
 #define Switch_RF_Pin GPIO_PIN_3

@@ -1,8 +1,11 @@
 /*
  * lux_app.h
  *
- *  Created on: 15 janv. 2026
- *      Author: mamadou
+ *  Created on: 15 Jan 2026
+ *      Author: Mamadou
+ *
+ *  Application-level module for reading ambient light via ADC4.
+ *  Provides initialization and periodic update of lux sensor data.
  */
 
 #ifndef LUX_APP_H_
@@ -14,9 +17,17 @@ extern "C" {
 
 /* Includes ------------------------------------------------------------------*/
 
+/**
+ * @brief Initialize the light sensor module.
+ *        Performs ADC calibration and prepares the sensor for readings.
+ */
 void lux_app_init(void);
-void lux_app_task(void);
 
+/**
+ * @brief Periodic task to read light sensor values.
+ *        Reads the ADC, converts if necessary, and updates sensor data storage.
+ */
+void lux_app_task(void);
 
 #ifdef __cplusplus
 }

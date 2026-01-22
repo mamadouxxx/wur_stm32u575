@@ -23,8 +23,8 @@
 /* USER CODE BEGIN Includes */
 #include "app_sensors.h"
 #include "telemetry.h"
-#include "rf_ook_tx.h"
-
+#include "rf_ook_proto.h"
+#include "rf_ook_rx.h"
 
 /* USER CODE END Includes */
 
@@ -53,6 +53,7 @@ I2C_HandleTypeDef hi2c3;
 SPI_HandleTypeDef hspi1;
 
 TIM_HandleTypeDef htim1;
+TIM_HandleTypeDef htim3;
 
 UART_HandleTypeDef huart1;
 
@@ -71,12 +72,27 @@ static void MX_I2C3_Init(void);
 static void MX_USART1_UART_Init(void);
 static void MX_SPI1_Init(void);
 static void MX_TIM1_Init(void);
+static void MX_TIM3_Init(void);
 /* USER CODE BEGIN PFP */
 
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
+
+void my_rx_handler(rf_ook_rx_frame_t *frame)
+{
+    if (frame->address == NODE_ADDRESS)
+    {
+        // Traitement du payload
+//        process_payload(frame->payload);
+    }
+    else
+    {
+        // Relai si nécessaire
+//        relay_frame(frame->address, frame->payload);
+    }
+}
 
 /* USER CODE END 0 */
 
@@ -119,7 +135,14 @@ int main(void)
   MX_USART1_UART_Init();
   MX_SPI1_Init();
   MX_TIM1_Init();
+  MX_TIM3_Init();
   /* USER CODE BEGIN 2 */
+
+  rf_ook_proto_init();
+  rf_ook_rx_init();
+
+  uint8_t payload = 0xA;      // 00001010
+  uint8_t payload_bits = 4;  // on veut envoyer que 1010
 
   /* USER CODE END 2 */
 
@@ -128,10 +151,23 @@ int main(void)
 
   sensors_init();
 
+  // Enregistre le callback
+  rf_ook_proto_register_rx_callback(my_rx_handler);
+
+  // Démarre TIM3 ISR
+  HAL_TIM_Base_Start_IT(&htim3);
+
   while (1)
   {
       // Test TX
-      rf_ook_tx_send_test();
+	  rf_ook_proto_send_frame(0b11, &payload, payload_bits);
+
+	  // Test Rx
+      if (rx_frame_ready)
+      {
+          rf_ook_proto_handle_received_frame(rx_address, rx_payload);
+          rx_frame_ready = 0;
+      }
 
       HAL_Delay(1000); // 1s entre chaque test
 
@@ -521,6 +557,51 @@ static void MX_TIM1_Init(void)
 }
 
 /**
+  * @brief TIM3 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_TIM3_Init(void)
+{
+
+  /* USER CODE BEGIN TIM3_Init 0 */
+
+  /* USER CODE END TIM3_Init 0 */
+
+  TIM_ClockConfigTypeDef sClockSourceConfig = {0};
+  TIM_MasterConfigTypeDef sMasterConfig = {0};
+
+  /* USER CODE BEGIN TIM3_Init 1 */
+
+  /* USER CODE END TIM3_Init 1 */
+  htim3.Instance = TIM3;
+  htim3.Init.Prescaler = 99;
+  htim3.Init.CounterMode = TIM_COUNTERMODE_UP;
+  htim3.Init.Period = 122;
+  htim3.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
+  htim3.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
+  if (HAL_TIM_Base_Init(&htim3) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sClockSourceConfig.ClockSource = TIM_CLOCKSOURCE_INTERNAL;
+  if (HAL_TIM_ConfigClockSource(&htim3, &sClockSourceConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sMasterConfig.MasterOutputTrigger = TIM_TRGO_RESET;
+  sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;
+  if (HAL_TIMEx_MasterConfigSynchronization(&htim3, &sMasterConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN TIM3_Init 2 */
+
+  /* USER CODE END TIM3_Init 2 */
+
+}
+
+/**
   * @brief USART1 Initialization Function
   * @param None
   * @retval None
@@ -596,7 +677,7 @@ static void MX_GPIO_Init(void)
                           |LED_BLUE_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(LED_RED_GPIO_Port, LED_RED_Pin, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(LED_ERROR_GPIO_Port, LED_ERROR_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pin Output Level */
   HAL_GPIO_WritePin(LED_GREEN_GPIO_Port, LED_GREEN_Pin, GPIO_PIN_RESET);
@@ -623,12 +704,12 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
 
-  /*Configure GPIO pin : LED_RED_Pin */
-  GPIO_InitStruct.Pin = LED_RED_Pin;
+  /*Configure GPIO pin : LED_ERROR_Pin */
+  GPIO_InitStruct.Pin = LED_ERROR_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
-  HAL_GPIO_Init(LED_RED_GPIO_Port, &GPIO_InitStruct);
+  HAL_GPIO_Init(LED_ERROR_GPIO_Port, &GPIO_InitStruct);
 
   /*Configure GPIO pin : LED_GREEN_Pin */
   GPIO_InitStruct.Pin = LED_GREEN_Pin;
@@ -658,6 +739,16 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 {
   /* USER CODE BEGIN Callback 0 */
 
+	  // Timer RX OOK
+	  if (htim->Instance == TIM3)
+	  {
+	    // Lecture du pin RX_DATA et traitement FSM
+	    uint8_t bit = HAL_GPIO_ReadPin(RX_DATA_GPIO_Port, RX_DATA_Pin);
+
+        // Passe le bit à la FSM RX
+        rf_ook_rx_bit_handler(bit);
+	  }
+
   /* USER CODE END Callback 0 */
   if (htim->Instance == TIM17)
   {
@@ -677,6 +768,9 @@ void Error_Handler(void)
   /* USER CODE BEGIN Error_Handler_Debug */
   /* User can add his own implementation to report the HAL error return state */
   __disable_irq();
+
+  const char msg[] = "HAL ERROR occurred!\r\n";
+  HAL_UART_Transmit(&huart1, (uint8_t*)msg, sizeof(msg)-1, 100);
   while (1)
   {
   }

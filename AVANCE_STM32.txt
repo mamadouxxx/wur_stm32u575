@@ -80,5 +80,8 @@ MOdulation OOK :
 
 	MSB→LSB
 	standard radio
+	
+	1011 à 1300 bits/s
 
+| PREAMBLE | WUR_SYNC | ADDR |
 
