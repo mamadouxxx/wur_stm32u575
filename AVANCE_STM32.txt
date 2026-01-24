@@ -85,3 +85,60 @@ MOdulation OOK :
 
 | PREAMBLE | WUR_SYNC | ADDR |
 
+101100
+000001
+
+
+
+                // Si on détecte un préambule correct, passer à SYNC
+                // Ici simple check : registre = alternance 10101010
+                // Tu peux améliorer avec un mask exact
+                rx_state = RX_SYNC;
+                rx_bit_count = 0;
+                rx_shift_reg = 0;
+
+
+
+┌──────────┐
+│  STOP    │  ← état par défaut
+└────┬─────┘
+     │ WuR IRQ (EXTI)
+     ▼
+┌──────────┐
+│ WAKEUP   │  ← sortie STOP, clocks, régulateur
+└────┬─────┘
+     │ délai stabilisation
+     ▼
+┌──────────┐
+│ RX_ARMED │  ← RX prêt, TIM3 pas encore actif
+└────┬─────┘
+     │ start RX window
+     ▼
+┌──────────┐
+│ RX_ADDR  │  ← lecture adresse
+└────┬─────┘
+     │ adresse reçue
+     ▼
+┌──────────┐
+│ DECISION │  ← pour moi ?
+└───┬───┬──┘
+    │   │
+    │   └──────────────┐
+    │                  ▼
+    ▼              ┌──────────┐
+┌──────────┐        │ RELAY    │
+│ RX_PAYLD │        └────┬─────┘
+└────┬─────┘             │ fin
+     │ fin payload       ▼
+     ▼               ┌──────────┐
+┌──────────┐          │  STOP    │
+│ PROCESS  │          └──────────┘
+└────┬─────┘
+     │ fin TX / capteurs
+     ▼
+┌──────────┐
+│  STOP    │
+└──────────┘
+
+
+

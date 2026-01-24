@@ -80,20 +80,6 @@ static void MX_TIM3_Init(void);
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
 
-void my_rx_handler(rf_ook_rx_frame_t *frame)
-{
-    if (frame->address == NODE_ADDRESS)
-    {
-        // Traitement du payload
-//        process_payload(frame->payload);
-    }
-    else
-    {
-        // Relai si nécessaire
-//        relay_frame(frame->address, frame->payload);
-    }
-}
-
 /* USER CODE END 0 */
 
 /**
@@ -139,10 +125,9 @@ int main(void)
   /* USER CODE BEGIN 2 */
 
   rf_ook_proto_init();
-  rf_ook_rx_init();
 
   uint8_t payload = 0xA;      // 00001010
-  uint8_t payload_bits = 4;  // on veut envoyer que 1010
+  uint8_t payload_len_bytes = 1;  // on veut envoyer que 1010
 
   /* USER CODE END 2 */
 
@@ -151,23 +136,13 @@ int main(void)
 
   sensors_init();
 
-  // Enregistre le callback
-  rf_ook_proto_register_rx_callback(my_rx_handler);
-
-  // Démarre TIM3 ISR
-  HAL_TIM_Base_Start_IT(&htim3);
-
   while (1)
   {
       // Test TX
-	  rf_ook_proto_send_frame(0b11, &payload, payload_bits);
+	  rf_ook_proto_send_frame(0b11, &payload, payload_len_bytes);
 
 	  // Test Rx
-      if (rx_frame_ready)
-      {
-          rf_ook_proto_handle_received_frame(rx_address, rx_payload);
-          rx_frame_ready = 0;
-      }
+//	  rf_ook_proto_handle_received_frame();
 
       HAL_Delay(1000); // 1s entre chaque test
 
@@ -530,7 +505,7 @@ static void MX_TIM1_Init(void)
   htim1.Instance = TIM1;
   htim1.Init.Prescaler = 15;
   htim1.Init.CounterMode = TIM_COUNTERMODE_UP;
-  htim1.Init.Period = 65535;
+  htim1.Init.Period = 768;
   htim1.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
   htim1.Init.RepetitionCounter = 0;
   htim1.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
@@ -739,15 +714,19 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 {
   /* USER CODE BEGIN Callback 0 */
 
-	  // Timer RX OOK
-	  if (htim->Instance == TIM3)
-	  {
-	    // Lecture du pin RX_DATA et traitement FSM
-	    uint8_t bit = HAL_GPIO_ReadPin(RX_DATA_GPIO_Port, RX_DATA_Pin);
+  // Timer TX OOK
+  if (htim->Instance == TIM1) {
 
-        // Passe le bit à la FSM RX
-        rf_ook_rx_bit_handler(bit);
-	  }
+  }
+
+  // Timer RX OOK
+  if (htim->Instance == TIM3)
+  {
+		uint8_t bit = HAL_GPIO_ReadPin(RX_DATA_GPIO_Port, RX_DATA_Pin);
+		rf_ook_rx_bit_callback(bit);
+  }
+
+
 
   /* USER CODE END Callback 0 */
   if (htim->Instance == TIM17)

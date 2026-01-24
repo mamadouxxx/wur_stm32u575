@@ -19,6 +19,13 @@ extern "C" {
 #include "stm32u5xx_hal.h"
 #include "main.h"
 
+typedef struct {
+    rf_ook_frame_t frame;  // la trame à envoyer
+    uint8_t byte_idx;
+    int8_t  bit_idx;
+    bool    active;
+} rf_ook_tx_t;
+
 /**
  * @brief Initialize the RF OOK transmitter module.
  *
@@ -31,24 +38,8 @@ void rf_ook_tx_init(void);
  * @brief Send a single OOK bit.
  *
  * @param bit     Bit value to send (0 or 1)
- * @param bit_us  Duration of the bit in microseconds
  */
-void rf_ook_tx_send_bit(uint8_t bit, uint32_t bit_us);
-
-/**
- * @brief Send a full OOK frame.
- *
- * The frame includes:
- * - Preamble (alternating 1s and 0s)
- * - Node address
- * - Payload
- *
- * @param address       bit node address
- * @param payload       Pointer to the payload data
- * @param payload_bits  Size of the payload in bits
- * @param bit_us        Duration of each bit in microseconds
- */
-void rf_ook_tx_send_frame(uint8_t address, uint8_t *payload, uint8_t payload_bits, uint32_t bit_us);
+void rf_ook_tx_send_bit(uint8_t bit);
 
 /**
  * @brief End an OOK RF transmission.
@@ -69,21 +60,13 @@ void rf_ook_end_tx();
  */
 void rf_ook_tx_start_tx();
 
-
-/**
- * @brief Quick test function to send a short frame for verification.
- *
- * Can be used to check the signal on an oscilloscope.
- */
-void rf_ook_tx_send_test(void);
-
 /**
  * @brief Callback function to send a single bit (for use with protocol layer).
  *
  * @param bit     Bit value to send (0 or 1)
  * @param bit_us  Duration of the bit in microseconds
  */
-void rf_ook_tx_bit_callback(uint8_t bit, uint32_t bit_us);
+void rf_ook_tx_bit_callback(uint8_t bit);
 
 /**
  * @brief Callback function for precise microsecond delay (for protocol layer)
@@ -92,19 +75,6 @@ void rf_ook_tx_bit_callback(uint8_t bit, uint32_t bit_us);
  */
 void rf_ook_tx_delay_callback(uint32_t us);
 
-/**
- * @brief Turn on the RF transmitter
- *
- * Sets the TX enable pin HIGH.
- */
-void tx_on(void);
-
-/**
- * @brief Turn off the RF transmitter
- *
- * Sets the TX enable pin LOW.
- */
-void tx_off(void);
 
 #ifdef __cplusplus
 }

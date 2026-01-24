@@ -20,9 +20,6 @@ extern "C" {
 /** @brief Default bitrate for OOK communication in bits per second */
 #define RF_OOK_DEFAULT_BPS	1300
 
-/** @brief Number of preamble bits per frame */
-#define PREAMBLE_BITS		8
-
 /** @brief Number of sync bits per frame */
 #define SYNC_NB_BITS		6
 
@@ -37,6 +34,18 @@ extern "C" {
 
 /** @brief Time to wait for TX stabilization before sending bits (in microseconds) */
 #define TX_STABILIZATION_US 1000
+
+#define RF_WAKEUP_DELAY_US   20000   // 20 ms
+
+#define PAYLOAD_BYTES   	8
+#define BUFFER_SIZE			8       // nombre de trames stockables
+#define MAX_PAYLOAD_SIZE	32    // taille max du payload
+
+typedef struct {
+    uint8_t address;
+    uint8_t payload[PAYLOAD_BYTES];
+} rf_ook_frame_t;
+
 
 /**
  * @brief Delay execution for a precise number of microseconds

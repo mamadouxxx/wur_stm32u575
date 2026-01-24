@@ -23,7 +23,7 @@ extern "C" {
  * @param bit      Bit value to send (0 or 1)
  * @param bit_us   Duration of the bit in microseconds
  */
-typedef void (*rf_ook_tx_bit_cb_t)(uint8_t bit, uint32_t bit_us);
+typedef void (*rf_ook_tx_bit_cb_t)(uint8_t bit);
 
 /**
  * @brief Callback type for microsecond delay
@@ -40,14 +40,6 @@ typedef struct {
     rf_ook_delay_cb_t  delay_cb;       /**< Callback for microsecond delay */
     uint32_t bitrate;                   /**< Bitrate in bits per second (optional, 0 = default) */
 } rf_ook_proto_init_t;
-
-/**
- * @brief Structure d'une frame OOK reçue
- */
-typedef struct {
-    uint8_t address;   /**< adresse du noeud */
-    uint8_t payload;   /**< payload reçu (1 octet, adapter si nécessaire) */
-} rf_ook_rx_frame_t;
 
 /**
  * @brief Initialize the protocol layer with user callbacks.
@@ -72,33 +64,14 @@ void rf_ook_proto_init(void);
  *
  * @param address       bit node address
  * @param payload       Pointer to payload data
- * @param payload_bits  Number of bits in the payload
+ * @param payload_bytes  Number bytes of payload
  */
-void rf_ook_proto_send_frame(uint8_t address, uint8_t *payload, uint8_t payload_bits);
+void rf_ook_proto_send_frame(uint8_t address, uint8_t *payload, uint8_t payload_len_bytes);
 
 /**
- * @brief Callback pour notifier qu'une frame a été reçue
  *
- * @param frame Pointeur vers la frame complète
  */
-typedef void (*rf_ook_rx_frame_cb_t)(rf_ook_rx_frame_t *frame);
-
-/**
- * @brief Enregistrer le callback RX
- *
- * @param cb Fonction à appeler quand une frame complète est reçue
- */
-void rf_ook_proto_register_rx_callback(rf_ook_rx_frame_cb_t cb);
-
-/**
- * @brief Traiter une frame reçue depuis le RX
- *
- * À appeler depuis le main loop quand rx_frame_ready = 1
- *
- * @param address adresse reçue
- * @param payload payload reçu
- */
-void rf_ook_proto_handle_received_frame(uint8_t address, uint8_t payload);
+void rf_ook_proto_handle_received_frame(void);
 
 #ifdef __cplusplus
 }
