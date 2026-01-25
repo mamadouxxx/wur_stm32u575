@@ -4,8 +4,8 @@
  * @date 19 Jan 2026
  * @brief RF 433 MHz OOK Transmitter module (TX)
  *
- * Provides functions to send bits
- * using On-Off Keying (OOK) modulation.
+ * Provides functions to transmit bits using On-Off Keying (OOK)
+ * modulation and manages frame-level TX states.
  */
 
 #ifndef RF_OOK_TX_H_
@@ -16,65 +16,47 @@ extern "C" {
 #endif
 
 #include <stdint.h>
-#include "stm32u5xx_hal.h"
+#include "rf_ook_types.h"
+#include <stdbool.h>
 #include "main.h"
 
-typedef struct {
-    rf_ook_frame_t frame;  // la trame à envoyer
-    uint8_t byte_idx;
-    int8_t  bit_idx;
-    bool    active;
-} rf_ook_tx_t;
+#define WAKEUP_DELAY_US   10000
+
+/** @brief Time to wait after SYNC before sending address (in ticks of BIT_US) */
+#define TX_WAIT_TICKS  (WAKEUP_DELAY_US / BIT_US)
 
 /**
  * @brief Initialize the RF OOK transmitter module.
  *
- * Configures GPIOs and prepares the timer for microsecond delays.
+ * Configures GPIOs and prepares the RF hardware.
  * By default, the antenna is set to RX mode.
  */
 void rf_ook_tx_init(void);
 
 /**
- * @brief Send a single OOK bit.
+ * @brief Start an OOK RF transmission.
  *
- * @param bit     Bit value to send (0 or 1)
+ * Enables the RF TX path and powers on the transmitter.
+ * After calling this, bits can be sent using rf_ook_tx_send_bit().
  */
-void rf_ook_tx_send_bit(uint8_t bit);
+void rf_ook_tx_start_tx(void);
 
 /**
  * @brief End an OOK RF transmission.
- * After this call, the RF module is fully stopped and does not emit.
  *
+ * Stops any ongoing transmission and powers down the RF TX path.
  */
-void rf_ook_end_tx();
+void rf_ook_end_tx(void);
 
 /**
- * @brief Start an OOK RF transmission.
+ * @brief Send a single OOK bit using the TX state machine.
  *
- * This function enables the RF transmission path and powers on
- * the RF transmitter.
+ * The function automatically selects the correct bit to send
+ * depending on the current TX state (SYNC, WAIT, ADDRESS, PAYLOAD).
  *
- * After calling this function, the RF module is ready to transmit
- * OOK-modulated bits using the TX_DATA pin.
- *
+ * @param frame Pointer to the TX frame context
  */
-void rf_ook_tx_start_tx();
-
-/**
- * @brief Callback function to send a single bit (for use with protocol layer).
- *
- * @param bit     Bit value to send (0 or 1)
- * @param bit_us  Duration of the bit in microseconds
- */
-void rf_ook_tx_bit_callback(uint8_t bit);
-
-/**
- * @brief Callback function for precise microsecond delay (for protocol layer)
- *
- * @param us  Delay in microseconds
- */
-void rf_ook_tx_delay_callback(uint32_t us);
-
+void rf_ook_tx_send_bit(rf_ook_tx_frame_t *frame);
 
 #ifdef __cplusplus
 }

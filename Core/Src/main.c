@@ -25,6 +25,7 @@
 #include "telemetry.h"
 #include "rf_ook_proto.h"
 #include "rf_ook_rx.h"
+#include "rf_ook_tx.h"
 
 /* USER CODE END Includes */
 
@@ -124,6 +125,7 @@ int main(void)
   MX_TIM3_Init();
   /* USER CODE BEGIN 2 */
 
+  /* init du protocole de communication */
   rf_ook_proto_init();
 
   uint8_t payload = 0xA;      // 00001010
@@ -142,6 +144,8 @@ int main(void)
 	  rf_ook_proto_send_frame(0b11, &payload, payload_len_bytes);
 
 	  // Test Rx
+//	  __HAL_TIM_SET_COUNTER(&htim3, 0);	// Lancer le timer IRQ
+//	  HAL_TIM_Base_Start_IT(&htim3);
 //	  rf_ook_proto_handle_received_frame();
 
       HAL_Delay(1000); // 1s entre chaque test
@@ -715,23 +719,22 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
   /* USER CODE BEGIN Callback 0 */
 
   // Timer TX OOK
-  if (htim->Instance == TIM1) {
-
+  rf_ook_tx_frame_t* tx_frame = rf_ook_proto_get_tx_frame();
+  if (htim->Instance == TIM1 && tx_frame->active) {
+	  rf_ook_tx_send_bit(tx_frame);
   }
 
   // Timer RX OOK
   if (htim->Instance == TIM3)
   {
-		uint8_t bit = HAL_GPIO_ReadPin(RX_DATA_GPIO_Port, RX_DATA_Pin);
-		rf_ook_rx_bit_callback(bit);
+	  uint8_t bit = HAL_GPIO_ReadPin(RX_DATA_GPIO_Port, RX_DATA_Pin);
+	  rf_ook_rx_receive_bit(bit);
   }
-
-
 
   /* USER CODE END Callback 0 */
   if (htim->Instance == TIM17)
   {
-    HAL_IncTick();
+	  HAL_IncTick();
   }
   /* USER CODE BEGIN Callback 1 */
 

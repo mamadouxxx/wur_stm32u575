@@ -2,76 +2,66 @@
  * @file rf_ook_proto.h
  * @author Mamadou
  * @date 20 Jan 2026
- * @brief Application layer for OOK 433 MHz protocol
+ * @brief Application layer for OOK 433 MHz protocol.
  *
- * Provides functions to send OOK frames (preamble + address + payload)
+ * Provides functions to send and receive OOK frames (SYNC + address + payload)
  * using callbacks for bit-level transmission and microsecond delays.
+ * This layer abstracts the hardware layer from the application.
  */
 
 #ifndef RF_OOK_PROTO_H_
 #define RF_OOK_PROTO_H_
 
 #include <stdint.h>
+#include "rf_ook_types.h"
+#include "main.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
 /**
- * @brief Callback type to send a single OOK bit
+ * @brief Initialize the OOK protocol module.
  *
- * @param bit      Bit value to send (0 or 1)
- * @param bit_us   Duration of the bit in microseconds
- */
-typedef void (*rf_ook_tx_bit_cb_t)(uint8_t bit);
-
-/**
- * @brief Callback type for microsecond delay
- *
- * @param us Delay in microseconds
- */
-typedef void (*rf_ook_delay_cb_t)(uint32_t us);
-
-/**
- * @brief Initialization structure for rf_ook_proto
- */
-typedef struct {
-    rf_ook_tx_bit_cb_t tx_send_bit_cb; /**< Callback to send a single bit */
-    rf_ook_delay_cb_t  delay_cb;       /**< Callback for microsecond delay */
-    uint32_t bitrate;                   /**< Bitrate in bits per second (optional, 0 = default) */
-} rf_ook_proto_init_t;
-
-/**
- * @brief Initialize the protocol layer with user callbacks.
- *
- * Sets the bit and delay callbacks, and configures the bitrate.
- * Must be called before sending frames.
- *
- * @param init Pointer to initialization structure
- */
-void init(rf_ook_proto_init_t *init);
-
-/**
- * @brief Initialize the full protocol module with default TX/RX callbacks
- *
- * Calls rf_ook_tx_init() and sets default callbacks for bit sending
- * using rf_ook_tx_bit_callback.
+ * Sets up TX and RX modules and prepares the protocol layer
+ * for sending and receiving frames.
  */
 void rf_ook_proto_init(void);
 
 /**
- * @brief Send a full OOK frame (preamble + address + payload)
+ * @brief Send a full OOK frame.
  *
- * @param address       bit node address
- * @param payload       Pointer to payload data
- * @param payload_bytes  Number bytes of payload
+ * Prepares a frame with SYNC, address, and payload, and starts
+ * transmission using the TX state machine and timer interrupts.
+ *
+ * @param address           Node address (2 bits)
+ * @param payload           Pointer to payload data array
+ * @param payload_len_bytes Number of bytes in the payload
  */
 void rf_ook_proto_send_frame(uint8_t address, uint8_t *payload, uint8_t payload_len_bytes);
 
 /**
+ * @brief Process received frames from the RX FIFO.
  *
+ * Can be used to decode, dispatch, or retransmit frames.
  */
 void rf_ook_proto_handle_received_frame(void);
+
+/**
+ * @brief Get a pointer to the current TX frame structure.
+ *
+ * Allows checking or modifying the frame state from the application.
+ *
+ * @return Pointer to the active transmission context
+ */
+rf_ook_tx_frame_t* rf_ook_proto_get_tx_frame(void);
+
+/**
+ * @brief Check if the protocol layer is currently transmitting.
+ *
+ * @return true if TX is active, false otherwise
+ */
+bool rf_ook_proto_is_busy(void);
 
 #ifdef __cplusplus
 }

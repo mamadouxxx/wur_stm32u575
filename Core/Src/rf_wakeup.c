@@ -7,7 +7,6 @@
 
 
 #include "rf_wakeup.h"
-#include "rf_ook_phy.h"
 #include "rf_ook_rx.h"
 
 static volatile bool rx_active = false;
