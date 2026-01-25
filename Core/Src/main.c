@@ -26,6 +26,7 @@
 #include "rf_ook_proto.h"
 #include "rf_ook_rx.h"
 #include "rf_ook_tx.h"
+#include "AD5668_cna.h"
 
 /* USER CODE END Includes */
 
@@ -125,31 +126,36 @@ int main(void)
   MX_TIM3_Init();
   /* USER CODE BEGIN 2 */
 
+  /* USER CODE END 2 */
+
+  /* Infinite loop */
+  /* USER CODE BEGIN WHILE */
+
+  // Initialisation du DAC pour la WuR
+  cna_init();  // configure SPI, CLR, LDAC et met les tensions initiales
+
+  /* initialisez les capteurs */
+  sensors_init();
+
   /* init du protocole de communication */
   rf_ook_proto_init();
 
   uint8_t payload = 0xA;      // 00001010
   uint8_t payload_len_bytes = 1;  // on veut envoyer que 1010
 
-  /* USER CODE END 2 */
-
-  /* Infinite loop */
-  /* USER CODE BEGIN WHILE */
-
-  sensors_init();
-
   while (1)
   {
-      // Test TX
-	  rf_ook_proto_send_frame(0b11, &payload, payload_len_bytes);
+      /* Test TX */
+//	  rf_ook_proto_send_frame(0b11, &payload, payload_len_bytes);
 
-	  // Test Rx
+	  /* Test Rx */
 //	  __HAL_TIM_SET_COUNTER(&htim3, 0);	// Lancer le timer IRQ
 //	  HAL_TIM_Base_Start_IT(&htim3);
 //	  rf_ook_proto_handle_received_frame();
 
       HAL_Delay(1000); // 1s entre chaque test
 
+      /* lancez les capteurs */
 //      sensors_task();
 //      telemetry_send_uart();
 //      HAL_Delay(2000);
@@ -652,7 +658,7 @@ static void MX_GPIO_Init(void)
   HAL_GPIO_WritePin(GPIOA, TX_DATA_Pin|ONOFF_capteurs_Pin|TX_ONOFF_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOB, AD5568_CLR_Pin|Switch_RF_Pin|AD5568_SYNC_Pin|AD5568_LDAC_Pin
+  HAL_GPIO_WritePin(GPIOB, AD5668_CLR_Pin|Switch_RF_Pin|AD5668_SYNC_Pin|AD5668_LDAC_Pin
                           |LED_BLUE_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pin Output Level */
@@ -674,9 +680,9 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   HAL_GPIO_Init(GPIOF, &GPIO_InitStruct);
 
-  /*Configure GPIO pins : AD5568_CLR_Pin Switch_RF_Pin AD5568_SYNC_Pin AD5568_LDAC_Pin
+  /*Configure GPIO pins : AD5668_CLR_Pin Switch_RF_Pin AD5668_SYNC_Pin AD5668_LDAC_Pin
                            LED_BLUE_Pin */
-  GPIO_InitStruct.Pin = AD5568_CLR_Pin|Switch_RF_Pin|AD5568_SYNC_Pin|AD5568_LDAC_Pin
+  GPIO_InitStruct.Pin = AD5668_CLR_Pin|Switch_RF_Pin|AD5668_SYNC_Pin|AD5668_LDAC_Pin
                           |LED_BLUE_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
@@ -734,7 +740,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
   /* USER CODE END Callback 0 */
   if (htim->Instance == TIM17)
   {
-	  HAL_IncTick();
+    HAL_IncTick();
   }
   /* USER CODE BEGIN Callback 1 */
 
