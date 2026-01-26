@@ -63,6 +63,13 @@ rf_ook_tx_frame_t* rf_ook_proto_get_tx_frame(void);
  */
 bool rf_ook_proto_is_busy(void);
 
+/**
+ * @brief Get the node address of this MCU.
+ *
+ * @return Node address as uint8_t (limited by ADDRESS_BITS)
+ */
+uint8_t rf_ook_get_node_address(void);
+
 #ifdef __cplusplus
 }
 #endif

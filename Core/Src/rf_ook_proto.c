@@ -12,6 +12,8 @@
 #include "rf_ook_tx.h"
 #include "rf_ook_rx.h"
 
+static const uint8_t NODE_ADDRESS = 1;
+
 static rf_ook_tx_frame_t tx_frame;  /**< Runtime context of current TX frame */
 
 extern TIM_HandleTypeDef htim1;     /**< Timer used for microsecond delays and TX ISR */
@@ -95,22 +97,30 @@ void rf_ook_proto_handle_received_frame(void)
 {
     rf_ook_frame_t frame;
 
-//    if (rf_ook_rx_is_frame_ready()) {
-//        rf_ook_frame_t frame;
-//        if (rf_ook_rx_get_frame(&frame)) {
-//            process_frame(frame);
-//        }
-//        rf_ook_rx_clear_frame_ready(); // reset flag
-//    }
-
-    while (rf_ook_rx_get_frame(&frame)) {
-        // TODO: implement application-specific handling
-        // e.g. process_frame(frame);
-        // e.g. retransmit frame as router
-        // rf_ook_proto_send_frame(frame.address, frame.payload, frame.payload_len);
+    /* Fast exit if no frame is ready */
+    if (!rf_ook_rx_is_frame_ready()) {
+        return;
     }
-}
 
+    /* Drain RX FIFO */
+    while (rf_ook_rx_get_frame(&frame)) {
+
+        /* Example: address filtering */
+        if (frame.address == rf_ook_get_node_address()) {
+            /* Frame intended for this node */
+            // process_frame(&frame);
+        }
+        else {
+            /* Optional: routing / forwarding */
+            // rf_ook_proto_send_frame(frame.address,
+            //                          frame.payload,
+            //                          frame.payload_len);
+        }
+    }
+
+    /* RX buffer drained */
+    rf_ook_rx_clear_frame_ready();
+}
 /* -------------------------------------------------------------------------- */
 /*                        TX frame access and status                           */
 /* -------------------------------------------------------------------------- */
@@ -135,4 +145,14 @@ rf_ook_tx_frame_t* rf_ook_proto_get_tx_frame(void)
 bool rf_ook_proto_is_busy(void)
 {
     return tx_frame.active;
+}
+
+/**
+ * @brief Getter for NODE_ADDRESS
+ *
+ * Provides access to the node address in a safe way
+ */
+uint8_t rf_ook_get_node_address(void)
+{
+    return NODE_ADDRESS & ((1 << ADDRESS_BITS) - 1);
 }

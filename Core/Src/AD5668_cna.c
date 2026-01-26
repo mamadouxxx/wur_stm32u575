@@ -9,10 +9,10 @@
 #include <math.h>
 
 #define CNA_DAC_MAX_CODE 65535
-#define CNA_VREF_mV 2500.0f
+#define CNA_VREF_mV 3300.0f
 
 /* Tensions initiales des canaux en mV */
-static const float cna_init_voltages[8] = {500, 500, 1000, 250, 250, 800, 500, 450};
+static const float cna_init_voltages[8] = {500, 500, 900, 250, 250, 800, 500, 400};
 
 /**
  * @brief Convertit tension (mV) en code 16 bits DAC
@@ -29,17 +29,14 @@ static uint16_t voltage_to_code(float voltage_mV)
  */
 static void cna_write_dac(uint8_t command, uint8_t channel, uint16_t data, uint8_t function)
 {
-    uint8_t b1 = command;
-    uint8_t b2 = (channel << 4) | (data >> 12);        // 4 bits adresse + 4 MSB data
-    uint8_t b3 = (data >> 4) & 0xFF;                  // 8 bits milieu
-    uint8_t b4 = ((data & 0xF) << 4) | (function & 0xF);
+    uint8_t tx[4];
+    tx[0] = command;
+    tx[1] = (channel << 4) | (data >> 12);
+    tx[2] = (data >> 4) & 0xFF;
+    tx[3] = ((data & 0xF) << 4) | (function & 0xF);
 
     HAL_GPIO_WritePin(AD5668_SYNC_GPIO_Port, AD5668_SYNC_Pin, GPIO_PIN_RESET); // SS LOW
-    HAL_Delay(1); // 1ms ou delay micro si besoin
-    HAL_SPI_Transmit(&hspi1, &b1, 1, 10);
-    HAL_SPI_Transmit(&hspi1, &b2, 1, 10);
-    HAL_SPI_Transmit(&hspi1, &b3, 1, 10);
-    HAL_SPI_Transmit(&hspi1, &b4, 1, 10);
+    HAL_SPI_Transmit(&hspi1, tx, 4, 10); // un seul envoi
     HAL_GPIO_WritePin(AD5668_SYNC_GPIO_Port, AD5668_SYNC_Pin, GPIO_PIN_SET);   // SS HIGH
 }
 
@@ -72,6 +69,7 @@ void cna_set_voltage(uint8_t channel, float voltage_mV)
 {
     uint16_t code = voltage_to_code(voltage_mV);
     cna_write_dac(CNA_CMD_WRITE_INPUT_UPDATE_N, channel, code, 15);
+    cna_toggle_ldac(); // assure que la tension est appliquée
 }
 
 void cna_write_channel(uint8_t channel, uint16_t code)

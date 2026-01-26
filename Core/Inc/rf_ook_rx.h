@@ -13,6 +13,7 @@
 
 #include <stdint.h>
 #include <stdbool.h>
+#include "main.h"
 #include "rf_ook_types.h"
 
 /**

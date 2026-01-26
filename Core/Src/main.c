@@ -27,6 +27,7 @@
 #include "rf_ook_rx.h"
 #include "rf_ook_tx.h"
 #include "AD5668_cna.h"
+#include <string.h>
 
 /* USER CODE END Includes */
 
@@ -140,17 +141,28 @@ int main(void)
   /* init du protocole de communication */
   rf_ook_proto_init();
 
-  uint8_t payload = 0xA;      // 00001010
-  uint8_t payload_len_bytes = 1;  // on veut envoyer que 1010
+  sensor_payload_t sensors;
+  uint8_t payload[MAX_PAYLOAD_SIZE];
+
+  sensors.co2 = 450;
+  sensors.temp = 2345;
+  sensors.hum = 5512;
+  sensors.lux = 120;
+  sensors.o2 = 210;
+  sensors.motion = 1;
+
+  memcpy(payload, &sensors, sizeof(sensor_payload_t));
+  uint8_t payload_len = sizeof(sensor_payload_t); // 11 octets
 
   while (1)
   {
       /* Test TX */
-//	  rf_ook_proto_send_frame(0b11, &payload, payload_len_bytes);
+//	  uint8_t node_addr = rf_ook_get_node_address();
+//	  rf_ook_proto_send_frame(node_addr, payload, payload_len);
 
 	  /* Test Rx */
-//	  __HAL_TIM_SET_COUNTER(&htim3, 0);	// Lancer le timer IRQ
-//	  HAL_TIM_Base_Start_IT(&htim3);
+	  __HAL_TIM_SET_COUNTER(&htim3, 0);	// Lancer le timer IRQ
+	  HAL_TIM_Base_Start_IT(&htim3);
 //	  rf_ook_proto_handle_received_frame();
 
       HAL_Delay(1000); // 1s entre chaque test
@@ -458,7 +470,7 @@ static void MX_SPI1_Init(void)
   hspi1.Instance = SPI1;
   hspi1.Init.Mode = SPI_MODE_MASTER;
   hspi1.Init.Direction = SPI_DIRECTION_2LINES;
-  hspi1.Init.DataSize = SPI_DATASIZE_4BIT;
+  hspi1.Init.DataSize = SPI_DATASIZE_8BIT;
   hspi1.Init.CLKPolarity = SPI_POLARITY_LOW;
   hspi1.Init.CLKPhase = SPI_PHASE_2EDGE;
   hspi1.Init.NSS = SPI_NSS_SOFT;

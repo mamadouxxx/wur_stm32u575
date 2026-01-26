@@ -68,8 +68,14 @@ void rf_ook_rx_reset(void) {
  *
  * @param bit Received bit (0 or 1)
  */
+#include <stdio.h>
+extern UART_HandleTypeDef huart1;
 void rf_ook_rx_receive_bit(uint8_t bit)
 {
+//    char msg[20];
+//    int len = sprintf(msg, "Bit recu: %d\r\n", bit);
+//    HAL_UART_Transmit(&huart1, (uint8_t*)msg, len, HAL_MAX_DELAY);
+
     switch (rx_state)
     {
         case RX_IDLE:
@@ -137,12 +143,17 @@ void rf_ook_rx_receive_bit(uint8_t bit)
  * @return 1 if frame was available, 0 if buffer is empty
  */
 uint8_t rf_ook_rx_get_frame(rf_ook_frame_t *frame) {
-    if (rx_frame_count == 0)
+    if (rx_frame_count == 0) {
+    	frame_ready = false;
         return 0; // buffer empty
+    }
+    __disable_irq();
 
     *frame = buffer[rx_tail];
     rx_tail = (rx_tail + 1) % BUFFER_SIZE;
     rx_frame_count--;
+
+    __enable_irq();
 
     return 1;
 }

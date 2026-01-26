@@ -55,6 +55,15 @@
 /*                               Frame structures                             */
 /* -------------------------------------------------------------------------- */
 
+typedef struct {
+    uint16_t co2;
+    int16_t temp;      // °C * 100
+    uint16_t hum;      // % * 100
+    uint16_t lux;
+    uint16_t o2;
+    uint8_t motion;    // 0 ou 1
+} sensor_payload_t;
+
 /**
  * @brief Logical OOK frame structure.
  *
