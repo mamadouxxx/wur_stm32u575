@@ -152,7 +152,11 @@ int main(void)
   sensors.motion = 1;
 
   memcpy(payload, &sensors, sizeof(sensor_payload_t));
-  uint8_t payload_len = sizeof(sensor_payload_t); // 11 octets
+  uint8_t payload_len = sizeof(sensor_payload_t);
+
+  /* Test Rx */
+  __HAL_TIM_SET_COUNTER(&htim3, 0);	// Lancer le timer IRQ
+  HAL_TIM_Base_Start_IT(&htim3);
 
   while (1)
   {
@@ -160,12 +164,11 @@ int main(void)
 //	  uint8_t node_addr = rf_ook_get_node_address();
 //	  rf_ook_proto_send_frame(node_addr, payload, payload_len);
 
-	  /* Test Rx */
-	  __HAL_TIM_SET_COUNTER(&htim3, 0);	// Lancer le timer IRQ
-	  HAL_TIM_Base_Start_IT(&htim3);
-//	  rf_ook_proto_handle_received_frame();
+	  if (rf_ook_rx_is_frame_ready()) {
+		  rf_ook_proto_handle_received_frame();
+	  }
 
-      HAL_Delay(1000); // 1s entre chaque test
+      HAL_Delay(10000);
 
       /* lancez les capteurs */
 //      sensors_task();

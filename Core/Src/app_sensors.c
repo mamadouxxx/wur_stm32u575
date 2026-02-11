@@ -22,7 +22,7 @@ void sensors_init(void)
 {
     scd30_app_init();
     // lux_app_init();  // Uncomment for calibrate light sensor is available
-    // o2_app_init();   // Uncomment to calibrate O2 sensor is available
+//     o2_app_init();   // Uncomment to calibrate O2 sensor is available
 }
 
 /**

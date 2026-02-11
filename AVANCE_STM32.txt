@@ -31,12 +31,12 @@ tension CNA :
 Sortie	Tension demandée
 OUTA	500 mV
 OUTB	500 mV
-OUTC	1000 mV
+OUTC	900 mV
 OUTD	250 mV
 OUTE	250 mV
 OUTF	800 mV
 OUTG	500 mV
-OUTH	450 mV
+OUTH	400 mV
 
 
 TX 433 LR

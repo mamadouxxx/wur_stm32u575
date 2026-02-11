@@ -42,8 +42,8 @@
 /** @brief Delay after SYNC to allow Wake-up Receiver to wake the MCU (microseconds) */
 #define RF_WAKEUP_DELAY_US    20000   /**< 20 ms */
 
-/** @brief Expected payload size in bytes for a complete frame */
-#define PAYLOAD_BYTES         8
+/** @brief Number of bits for payload length field */
+#define LENGTH_BITS           8
 
 /** @brief Number of frames that can be buffered in RX FIFO */
 #define BUFFER_SIZE           8
@@ -87,8 +87,9 @@ typedef struct {
  * Defines the different stages of frame transmission.
  */
 typedef enum {
-    TX_SYNC = 0,    /**< Transmitting SYNC bits */
-    TX_WAIT,        /**< Waiting for receiver wake-up delay */
+//    TX_SYNC = 0,    /**< Transmitting SYNC bits */
+//    TX_WAIT,        /**< Waiting for receiver wake-up delay */
+    TX_LENGTH,     	/**< Payload Length */
     TX_ADDRESS,     /**< Transmitting address bits */
     TX_PAYLOAD,     /**< Transmitting payload bits */
     TX_DONE         /**< Transmission completed */
@@ -102,7 +103,9 @@ typedef enum {
 typedef enum {
     RX_IDLE = 0,    /**< Waiting for address bits */
     RX_ADDRESS,     /**< Receiving address bits */
-    RX_PAYLOAD      /**< Receiving payload bits */
+    RX_LENGTH,     	/**< Payload length */
+    RX_PAYLOAD,      /**< Receiving payload bits */
+	RX_DONE			/**< Transmission completed */
 } rx_state_t;
 
 /* -------------------------------------------------------------------------- */
@@ -120,7 +123,7 @@ typedef struct {
     uint8_t byte_idx;       /**< Current payload byte index */
     int8_t bit_idx;         /**< Current bit index within byte */
     tx_state_t state;       /**< Current TX state */
-    bool active;            /**< Indicates if a transmission is active */
+    volatile bool active;            /**< Indicates if a transmission is active */
     uint16_t wait_ticks;    /**< Counter used during TX_WAIT state */
 } rf_ook_tx_frame_t;
 

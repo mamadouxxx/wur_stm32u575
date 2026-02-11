@@ -11,6 +11,10 @@
 #include "rf_ook_proto.h"
 #include "rf_ook_tx.h"
 #include "rf_ook_rx.h"
+#include <stdio.h>
+#include <string.h>
+
+extern UART_HandleTypeDef huart1;
 
 static const uint8_t NODE_ADDRESS = 1;
 
@@ -59,6 +63,14 @@ void rf_ook_proto_send_frame(uint8_t address, uint8_t *payload, uint8_t payload_
         return; // Transmission already in progress
     }
 
+    if ( payload_len_bytes > MAX_PAYLOAD_SIZE  ){
+        return;
+    }
+
+    if (payload == NULL && payload_len_bytes > 0) {
+        return;
+    }
+
     // Initialize TX frame
     tx_frame.frame.sync_bits = SYNC_BITS_VALUE;
     tx_frame.frame.address = address;
@@ -85,6 +97,52 @@ void rf_ook_proto_send_frame(uint8_t address, uint8_t *payload, uint8_t payload_
 /* -------------------------------------------------------------------------- */
 
 /**
+ * @brief Process a received frame
+ */
+static void process_frame(rf_ook_frame_t *frame)
+{
+    // Vérifier la taille
+    if (frame->payload_len != sizeof(sensor_payload_t)) {
+        char msg[50];
+        int len = sprintf(msg, "Invalid frame size: %d\r\n", frame->payload_len);
+        HAL_UART_Transmit(&huart1, (uint8_t*)msg, len, 100);
+        return;
+    }
+
+    // Extraire les données
+    sensor_payload_t sensors;
+    memcpy(&sensors, frame->payload, sizeof(sensor_payload_t));
+
+    // Afficher les données
+    char msg[80];
+    int len;
+
+    len = sprintf(msg, "=== Sensor Data ===\r\n");
+    HAL_UART_Transmit(&huart1, (uint8_t*)msg, len, 100);
+
+    len = sprintf(msg, "CO2: %d ppm\r\n", sensors.co2);
+    HAL_UART_Transmit(&huart1, (uint8_t*)msg, len, 100);
+
+    len = sprintf(msg, "Temp: %d\r\n", sensors.temp);
+    HAL_UART_Transmit(&huart1, (uint8_t*)msg, len, 100);
+
+    len = sprintf(msg, "Humidity: %d\r\n", sensors.hum);
+    HAL_UART_Transmit(&huart1, (uint8_t*)msg, len, 100);
+
+    len = sprintf(msg, "Lux: %d\r\n", sensors.lux);
+    HAL_UART_Transmit(&huart1, (uint8_t*)msg, len, 100);
+
+    len = sprintf(msg, "O2: %d %%\r\n", sensors.o2);
+    HAL_UART_Transmit(&huart1, (uint8_t*)msg, len, 100);
+
+    len = sprintf(msg, "Motion: %d\r\n", sensors.motion);
+    HAL_UART_Transmit(&huart1, (uint8_t*)msg, len, 100);
+
+    len = sprintf(msg, "==================\r\n");
+    HAL_UART_Transmit(&huart1, (uint8_t*)msg, len, 100);
+}
+
+/**
  * @brief Handle received frames from the RX FIFO.
  *
  * Should be called periodically in the main loop.
@@ -106,21 +164,23 @@ void rf_ook_proto_handle_received_frame(void)
     while (rf_ook_rx_get_frame(&frame)) {
 
         /* Example: address filtering */
-        if (frame.address == rf_ook_get_node_address()) {
+        if (frame.address == 0 ) {
             /* Frame intended for this node */
-            // process_frame(&frame);
+            process_frame(&frame);
         }
         else {
+            char msg[50];
             /* Optional: routing / forwarding */
             // rf_ook_proto_send_frame(frame.address,
             //                          frame.payload,
             //                          frame.payload_len);
+            int len = sprintf(msg, "handler Frame: addr=%d len=%d\r\n",
+            frame.address, frame.payload_len);
+            HAL_UART_Transmit(&huart1, (uint8_t*)msg, len, 100);
         }
     }
-
-    /* RX buffer drained */
-    rf_ook_rx_clear_frame_ready();
 }
+
 /* -------------------------------------------------------------------------- */
 /*                        TX frame access and status                           */
 /* -------------------------------------------------------------------------- */

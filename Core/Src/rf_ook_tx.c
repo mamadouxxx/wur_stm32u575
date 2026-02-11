@@ -9,8 +9,11 @@
  */
 
 #include "rf_ook_tx.h"
+#include <stdio.h>
 
 extern TIM_HandleTypeDef htim1; /**< Timer used for microsecond delays and ISR */
+extern UART_HandleTypeDef huart1;
+
 
 /* -------------------------------------------------------------------------- */
 /*                           Internal helper functions                        */
@@ -116,9 +119,24 @@ void rf_ook_tx_send_bit(rf_ook_tx_frame_t *frame)
         case TX_ADDRESS:
             bit = (frame->frame.address >> frame->bit_idx) & 1;
             if(frame->bit_idx == 0) {
-                frame->state = TX_PAYLOAD;
+                frame->state = TX_LENGTH;
                 frame->bit_idx = 7;
                 frame->byte_idx = 0;
+            } else {
+                frame->bit_idx--;
+            }
+            break;
+
+        case TX_LENGTH:
+            bit = (frame->frame.payload_len >> frame->bit_idx) & 1;
+            if(frame->bit_idx == 0) {
+                if (frame->frame.payload_len > 0) {
+                    frame->state = TX_PAYLOAD;
+                    frame->bit_idx = 7;
+                    frame->byte_idx = 0;
+                } else {
+                    frame->state = TX_DONE;
+                }
             } else {
                 frame->bit_idx--;
             }

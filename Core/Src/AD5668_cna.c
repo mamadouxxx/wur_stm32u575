@@ -17,7 +17,7 @@
 /**
  * @brief Default output voltages for all DAC channels (mV)
  */
-static const float cna_init_voltages[8] = {500, 500, 900, 250, 250, 800, 500, 400};
+static const float cna_init_voltages[8] = {500, 500, 1200, 250, 250, 800, 500, 400};
 
 /**
  * @brief Convert a voltage value (mV) to a 16-bit DAC code

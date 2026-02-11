@@ -58,11 +58,4 @@ uint8_t rf_ook_rx_get_frame(rf_ook_frame_t *frame);
  */
 bool rf_ook_rx_is_frame_ready(void);
 
-/**
- * @brief Clear the frame ready flag
- *
- * Call this after processing the frame to reset the notification.
- */
-void rf_ook_rx_clear_frame_ready(void);
-
 #endif /* RF_OOK_RX_H_ */

@@ -10,6 +10,9 @@
  */
 
 #include "rf_ook_rx.h"
+#include <stdio.h>
+extern TIM_HandleTypeDef htim3; /**< Timer used for microsecond delays and ISR */
+extern UART_HandleTypeDef huart1;
 
 /* -------------------------------------------------------------------------- */
 /*                               Internal RX FSM                               */
@@ -17,8 +20,8 @@
 static rx_state_t rx_state = RX_IDLE; /**< Current RX FSM state */
 static uint8_t rx_shift_reg = 0;      /**< Bit shift register */
 static uint8_t rx_bit_count = 0;      /**< Number of bits received for current field */
+static uint8_t rx_byte_count = 0;    /**< Number of datas bytes received */
 static rf_ook_frame_t rx_current;     /**< Current frame being received */
-static volatile bool frame_ready = false; /**< Flag set when a frame is ready in buffer */
 
 /* -------------------------------------------------------------------------- */
 /*                           Circular buffer storage                           */
@@ -52,6 +55,7 @@ void rf_ook_rx_reset(void) {
     rx_state = RX_IDLE;
     rx_shift_reg = 0;
     rx_bit_count = 0;
+    rx_byte_count = 0;
     rx_current.address = 0;
     rx_current.payload_len = 0;
 }
@@ -68,21 +72,14 @@ void rf_ook_rx_reset(void) {
  *
  * @param bit Received bit (0 or 1)
  */
-#include <stdio.h>
-extern UART_HandleTypeDef huart1;
 void rf_ook_rx_receive_bit(uint8_t bit)
 {
-//    char msg[20];
-//    int len = sprintf(msg, "Bit recu: %d\r\n", bit);
-//    HAL_UART_Transmit(&huart1, (uint8_t*)msg, len, HAL_MAX_DELAY);
-
     switch (rx_state)
     {
         case RX_IDLE:
-            rx_current.address = bit;
+            rx_shift_reg = (rx_shift_reg << 1) | (bit & 0x01);
             rx_bit_count = 1;
             rx_state = RX_ADDRESS;
-            rx_shift_reg = bit;
             break;
 
         case RX_ADDRESS:
@@ -91,11 +88,28 @@ void rf_ook_rx_receive_bit(uint8_t bit)
 
             if (rx_bit_count >= ADDRESS_BITS)
             {
-                rx_current.address = rx_shift_reg & ((1 << ADDRESS_BITS) - 1);
-                rx_state = RX_PAYLOAD;
+                rx_current.address = rx_shift_reg;
+                rx_state = RX_LENGTH;
                 rx_bit_count = 0;
                 rx_shift_reg = 0;
-                rx_current.payload_len = 0;
+            }
+            break;
+
+        case RX_LENGTH:
+            rx_shift_reg = (rx_shift_reg << 1) | (bit & 0x01);
+            rx_bit_count++;
+
+            if (rx_bit_count >= LENGTH_BITS)
+            {
+                rx_current.payload_len = rx_shift_reg;
+                if (rx_current.payload_len > MAX_PAYLOAD_SIZE) {
+                    rf_ook_rx_reset();
+                    break;
+                }
+                rx_state = RX_PAYLOAD;
+				rx_bit_count = 0;
+				rx_byte_count = 0;
+				rx_shift_reg = 0;
             }
             break;
 
@@ -105,32 +119,36 @@ void rf_ook_rx_receive_bit(uint8_t bit)
 
             if (rx_bit_count >= 8)
             {
-                if (rx_current.payload_len < MAX_PAYLOAD_SIZE)
+                if (rx_byte_count < rx_current.payload_len &&
+                    rx_byte_count < MAX_PAYLOAD_SIZE)
                 {
-                    rx_current.payload[rx_current.payload_len++] = rx_shift_reg;
+                    rx_current.payload[rx_byte_count] = rx_shift_reg;
+                    rx_byte_count++;
                 }
-
                 rx_bit_count = 0;
                 rx_shift_reg = 0;
             }
 
-            if (rx_current.payload_len >= PAYLOAD_BYTES)
+            if (rx_byte_count >= rx_current.payload_len)
             {
                 if (rx_frame_count < BUFFER_SIZE)
                 {
                     buffer[rx_head] = rx_current;
                     rx_head = (rx_head + 1) % BUFFER_SIZE;
                     rx_frame_count++;
-                    frame_ready = true;
                 }
                 else
                 {
                     rx_overflow_count++;
                 }
-
-                rf_ook_rx_reset();
+				rx_state = RX_DONE;
             }
             break;
+
+        case RX_DONE:
+//            HAL_TIM_Base_Stop_IT(&htim3);
+            rf_ook_rx_reset();
+        	break;
     }
 }
 
@@ -144,7 +162,6 @@ void rf_ook_rx_receive_bit(uint8_t bit)
  */
 uint8_t rf_ook_rx_get_frame(rf_ook_frame_t *frame) {
     if (rx_frame_count == 0) {
-    	frame_ready = false;
         return 0; // buffer empty
     }
     __disable_irq();
@@ -165,16 +182,5 @@ uint8_t rf_ook_rx_get_frame(rf_ook_frame_t *frame) {
  */
 bool rf_ook_rx_is_frame_ready(void)
 {
-    return frame_ready;
+    return (rx_frame_count > 0);;
 }
-
-/**
- * @brief Clear the frame ready flag
- *
- * Call this after processing the frame to reset the notification.
- */
-void rf_ook_rx_clear_frame_ready(void)
-{
-    frame_ready = false;
-}
-
