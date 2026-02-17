@@ -98,26 +98,26 @@ void rf_ook_tx_send_bit(rf_ook_tx_frame_t *frame)
     uint8_t bit = 0;
 
     switch(frame->state) {
-        case TX_SYNC:
-            bit = (frame->frame.sync_bits >> frame->bit_idx) & 1;
-            if(frame->bit_idx == 0) {
-                frame->state = TX_WAIT;
-                frame->wait_ticks = 0;
-            } else {
-                frame->bit_idx--;
-            }
-            break;
+//        case TX_SYNC:
+//            bit = (frame->frame.sync_bits >> frame->bit_idx) & 1;
+//            if(frame->bit_idx == 0) {
+//                frame->state = TX_WAIT;
+//                frame->wait_ticks = 0;
+//            } else {
+//                frame->bit_idx--;
+//            }
+//            break;
+//
+//        case TX_WAIT:
+//            frame->wait_ticks++;
+//            if (frame->wait_ticks >= TX_WAIT_TICKS) {
+//                frame->state = TX_ADDRESS;
+//                frame->bit_idx = ADDRESS_BITS - 1;
+//            }
+//            return; // no bit is sent during wait
 
-        case TX_WAIT:
-            frame->wait_ticks++;
-            if (frame->wait_ticks >= TX_WAIT_TICKS) {
-                frame->state = TX_ADDRESS;
-                frame->bit_idx = ADDRESS_BITS - 1;
-            }
-            return; // no bit is sent during wait
-
-        case TX_ADDRESS:
-            bit = (frame->frame.address >> frame->bit_idx) & 1;
+        case TX_DEST_ADDRESS:
+            bit = (frame->frame.dest_address >> frame->bit_idx) & 1;
             if(frame->bit_idx == 0) {
                 frame->state = TX_LENGTH;
                 frame->bit_idx = 7;

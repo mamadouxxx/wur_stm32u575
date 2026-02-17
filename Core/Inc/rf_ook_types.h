@@ -51,6 +51,9 @@
 /** @brief Maximum allowed payload size in bytes */
 #define MAX_PAYLOAD_SIZE      32
 
+#define TIMER_FREQ_HZ 16000000 // 16 MHz
+#define TIMER_TICK_US (1.0f / TIMER_FREQ_HZ * 1e6f) // durée d'un tick en µs
+
 /* -------------------------------------------------------------------------- */
 /*                               Frame structures                             */
 /* -------------------------------------------------------------------------- */
@@ -72,7 +75,7 @@ typedef struct {
  */
 typedef struct {
     uint8_t sync_bits;                      /**< Synchronization pattern */
-    uint8_t address;                        /**< Node address */
+    uint8_t dest_address;                        /**< Node address */
     uint8_t payload[MAX_PAYLOAD_SIZE];      /**< Payload data */
     uint8_t payload_len;                    /**< Payload length in bytes */
 } rf_ook_frame_t;
@@ -90,7 +93,7 @@ typedef enum {
 //    TX_SYNC = 0,    /**< Transmitting SYNC bits */
 //    TX_WAIT,        /**< Waiting for receiver wake-up delay */
     TX_LENGTH,     	/**< Payload Length */
-    TX_ADDRESS,     /**< Transmitting address bits */
+    TX_DEST_ADDRESS,     /**< Transmitting address bits */
     TX_PAYLOAD,     /**< Transmitting payload bits */
     TX_DONE         /**< Transmission completed */
 } tx_state_t;
@@ -102,7 +105,7 @@ typedef enum {
  */
 typedef enum {
     RX_IDLE = 0,    /**< Waiting for address bits */
-    RX_ADDRESS,     /**< Receiving address bits */
+    RX_DEST_ADDRESS,     /**< Receiving address bits */
     RX_LENGTH,     	/**< Payload length */
     RX_PAYLOAD,      /**< Receiving payload bits */
 	RX_DONE			/**< Transmission completed */

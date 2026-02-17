@@ -80,8 +80,12 @@ void Error_Handler(void);
 #define FLAG_GPIO_Port GPIOF
 #define RX_DATA_Pin GPIO_PIN_13
 #define RX_DATA_GPIO_Port GPIOF
+#define RX_DATA_EXTI_IRQn EXTI13_IRQn
 #define AD5668_CLR_Pin GPIO_PIN_10
 #define AD5668_CLR_GPIO_Port GPIOB
+#define BTN_SEND_TEST_Pin GPIO_PIN_15
+#define BTN_SEND_TEST_GPIO_Port GPIOD
+#define BTN_SEND_TEST_EXTI_IRQn EXTI15_IRQn
 #define LED_ERROR_Pin GPIO_PIN_2
 #define LED_ERROR_GPIO_Port GPIOG
 #define LED_GREEN_Pin GPIO_PIN_7
@@ -92,6 +96,9 @@ void Error_Handler(void);
 #define AD5668_SYNC_GPIO_Port GPIOB
 #define AD5668_LDAC_Pin GPIO_PIN_5
 #define AD5668_LDAC_GPIO_Port GPIOB
+#define BTN_RECEIVE_TEST_Pin GPIO_PIN_6
+#define BTN_RECEIVE_TEST_GPIO_Port GPIOB
+#define BTN_RECEIVE_TEST_EXTI_IRQn EXTI6_IRQn
 #define LED_BLUE_Pin GPIO_PIN_7
 #define LED_BLUE_GPIO_Port GPIOB
 

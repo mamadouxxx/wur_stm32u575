@@ -17,7 +17,6 @@
 extern UART_HandleTypeDef huart1;
 
 static const uint8_t NODE_ADDRESS = 1;
-
 static rf_ook_tx_frame_t tx_frame;  /**< Runtime context of current TX frame */
 
 extern TIM_HandleTypeDef htim1;     /**< Timer used for microsecond delays and TX ISR */
@@ -73,14 +72,19 @@ void rf_ook_proto_send_frame(uint8_t address, uint8_t *payload, uint8_t payload_
 
     // Initialize TX frame
     tx_frame.frame.sync_bits = SYNC_BITS_VALUE;
-    tx_frame.frame.address = address;
+    tx_frame.frame.dest_address = address;
     for(uint8_t i = 0; i < payload_len_bytes; i++)
         tx_frame.frame.payload[i] = payload[i];
     tx_frame.frame.payload_len = payload_len_bytes;
 
     tx_frame.byte_idx = 0;
-    tx_frame.bit_idx = SYNC_NB_BITS - 1;
-    tx_frame.state = TX_SYNC;
+
+    /*-------Test sans sync et wait (en attente wur)---------*/
+    tx_frame.bit_idx = ADDRESS_BITS - 1;
+    tx_frame.state = TX_DEST_ADDRESS;
+    /*----------------*/
+//    tx_frame.bit_idx = SYNC_NB_BITS - 1;
+//    tx_frame.state = TX_SYNC;
     tx_frame.active = true;
     tx_frame.wait_ticks = 0;
 
@@ -102,12 +106,12 @@ void rf_ook_proto_send_frame(uint8_t address, uint8_t *payload, uint8_t payload_
 static void process_frame(rf_ook_frame_t *frame)
 {
     // Vérifier la taille
-    if (frame->payload_len != sizeof(sensor_payload_t)) {
-        char msg[50];
-        int len = sprintf(msg, "Invalid frame size: %d\r\n", frame->payload_len);
-        HAL_UART_Transmit(&huart1, (uint8_t*)msg, len, 100);
-        return;
-    }
+//    if (frame->payload_len != sizeof(sensor_payload_t)) {
+//        char msg[50];
+//        int len = sprintf(msg, "Invalid frame size: %d\r\n", frame->payload_len);
+//        HAL_UART_Transmit(&huart1, (uint8_t*)msg, len, 100);
+//        return;
+//    }
 
     // Extraire les données
     sensor_payload_t sensors;
@@ -164,7 +168,7 @@ void rf_ook_proto_handle_received_frame(void)
     while (rf_ook_rx_get_frame(&frame)) {
 
         /* Example: address filtering */
-        if (frame.address == 0 ) {
+        if (frame.dest_address == 0) {
             /* Frame intended for this node */
             process_frame(&frame);
         }
@@ -175,7 +179,7 @@ void rf_ook_proto_handle_received_frame(void)
             //                          frame.payload,
             //                          frame.payload_len);
             int len = sprintf(msg, "handler Frame: addr=%d len=%d\r\n",
-            frame.address, frame.payload_len);
+            frame.dest_address, frame.payload_len);
             HAL_UART_Transmit(&huart1, (uint8_t*)msg, len, 100);
         }
     }

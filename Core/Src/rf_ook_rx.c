@@ -56,7 +56,7 @@ void rf_ook_rx_reset(void) {
     rx_shift_reg = 0;
     rx_bit_count = 0;
     rx_byte_count = 0;
-    rx_current.address = 0;
+    rx_current.dest_address = 0;
     rx_current.payload_len = 0;
 }
 
@@ -77,18 +77,18 @@ void rf_ook_rx_receive_bit(uint8_t bit)
     switch (rx_state)
     {
         case RX_IDLE:
-            rx_shift_reg = (rx_shift_reg << 1) | (bit & 0x01);
-            rx_bit_count = 1;
-            rx_state = RX_ADDRESS;
+        	rx_shift_reg = bit;
+        	rx_bit_count = 1;
+            rx_state = RX_DEST_ADDRESS;
             break;
 
-        case RX_ADDRESS:
+        case RX_DEST_ADDRESS:
             rx_shift_reg = (rx_shift_reg << 1) | (bit & 0x01);
             rx_bit_count++;
 
             if (rx_bit_count >= ADDRESS_BITS)
             {
-                rx_current.address = rx_shift_reg;
+                rx_current.dest_address = rx_shift_reg;
                 rx_state = RX_LENGTH;
                 rx_bit_count = 0;
                 rx_shift_reg = 0;

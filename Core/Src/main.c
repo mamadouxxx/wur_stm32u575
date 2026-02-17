@@ -28,6 +28,7 @@
 #include "rf_ook_tx.h"
 #include "AD5668_cna.h"
 #include <string.h>
+#include <stdio.h>
 
 /* USER CODE END Includes */
 
@@ -82,7 +83,8 @@ static void MX_TIM3_Init(void);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
-
+static uint8_t payload_len;
+static uint8_t payload[MAX_PAYLOAD_SIZE];
 /* USER CODE END 0 */
 
 /**
@@ -142,7 +144,6 @@ int main(void)
   rf_ook_proto_init();
 
   sensor_payload_t sensors;
-  uint8_t payload[MAX_PAYLOAD_SIZE];
 
   sensors.co2 = 450;
   sensors.temp = 2345;
@@ -152,23 +153,20 @@ int main(void)
   sensors.motion = 1;
 
   memcpy(payload, &sensors, sizeof(sensor_payload_t));
-  uint8_t payload_len = sizeof(sensor_payload_t);
-
-  /* Test Rx */
-  __HAL_TIM_SET_COUNTER(&htim3, 0);	// Lancer le timer IRQ
-  HAL_TIM_Base_Start_IT(&htim3);
+  payload_len = sizeof(sensor_payload_t);
 
   while (1)
   {
-      /* Test TX */
-//	  uint8_t node_addr = rf_ook_get_node_address();
-//	  rf_ook_proto_send_frame(node_addr, payload, payload_len);
-
-	  if (rf_ook_rx_is_frame_ready()) {
+	  // Traiter la trame reçue dans la boucle principale (pas dans l'IRQ)
+	  if (rf_ook_rx_is_frame_ready())
+	  {
+		  HAL_TIM_Base_Stop_IT(&htim3);
+		  char msg[] = "=== Trame recue ! ===\r\n";
+		  HAL_UART_Transmit(&huart1, (uint8_t*)msg, strlen(msg), 100);
 		  rf_ook_proto_handle_received_frame();
 	  }
 
-      HAL_Delay(10000);
+		HAL_Delay(10);  // Petite pause, pas 10 secondes !
 
       /* lancez les capteurs */
 //      sensors_task();
@@ -575,9 +573,9 @@ static void MX_TIM3_Init(void)
 
   /* USER CODE END TIM3_Init 1 */
   htim3.Instance = TIM3;
-  htim3.Init.Prescaler = 99;
+  htim3.Init.Prescaler = 0;
   htim3.Init.CounterMode = TIM_COUNTERMODE_UP;
-  htim3.Init.Period = 122;
+  htim3.Init.Period = 4294967295;
   htim3.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
   htim3.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
   if (HAL_TIM_Base_Init(&htim3) != HAL_OK)
@@ -667,6 +665,7 @@ static void MX_GPIO_Init(void)
   __HAL_RCC_GPIOA_CLK_ENABLE();
   __HAL_RCC_GPIOF_CLK_ENABLE();
   __HAL_RCC_GPIOB_CLK_ENABLE();
+  __HAL_RCC_GPIOD_CLK_ENABLE();
   __HAL_RCC_GPIOG_CLK_ENABLE();
 
   /*Configure GPIO pin Output Level */
@@ -689,11 +688,17 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 
-  /*Configure GPIO pins : FLAG_Pin RX_DATA_Pin */
-  GPIO_InitStruct.Pin = FLAG_Pin|RX_DATA_Pin;
+  /*Configure GPIO pin : FLAG_Pin */
+  GPIO_InitStruct.Pin = FLAG_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
-  HAL_GPIO_Init(GPIOF, &GPIO_InitStruct);
+  HAL_GPIO_Init(FLAG_GPIO_Port, &GPIO_InitStruct);
+
+  /*Configure GPIO pin : RX_DATA_Pin */
+  GPIO_InitStruct.Pin = RX_DATA_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_IT_RISING_FALLING;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  HAL_GPIO_Init(RX_DATA_GPIO_Port, &GPIO_InitStruct);
 
   /*Configure GPIO pins : AD5668_CLR_Pin Switch_RF_Pin AD5668_SYNC_Pin AD5668_LDAC_Pin
                            LED_BLUE_Pin */
@@ -703,6 +708,12 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
+
+  /*Configure GPIO pin : BTN_SEND_TEST_Pin */
+  GPIO_InitStruct.Pin = BTN_SEND_TEST_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_IT_RISING;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  HAL_GPIO_Init(BTN_SEND_TEST_GPIO_Port, &GPIO_InitStruct);
 
   /*Configure GPIO pin : LED_ERROR_Pin */
   GPIO_InitStruct.Pin = LED_ERROR_Pin;
@@ -718,12 +729,57 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(LED_GREEN_GPIO_Port, &GPIO_InitStruct);
 
+  /*Configure GPIO pin : BTN_RECEIVE_TEST_Pin */
+  GPIO_InitStruct.Pin = BTN_RECEIVE_TEST_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_IT_RISING;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  HAL_GPIO_Init(BTN_RECEIVE_TEST_GPIO_Port, &GPIO_InitStruct);
+
+  /* EXTI interrupt init*/
+  HAL_NVIC_SetPriority(EXTI6_IRQn, 5, 0);
+  HAL_NVIC_EnableIRQ(EXTI6_IRQn);
+
+  HAL_NVIC_SetPriority(EXTI13_IRQn, 0, 0);
+  HAL_NVIC_EnableIRQ(EXTI13_IRQn);
+
+  HAL_NVIC_SetPriority(EXTI15_IRQn, 5, 0);
+  HAL_NVIC_EnableIRQ(EXTI15_IRQn);
+
   /* USER CODE BEGIN MX_GPIO_Init_2 */
 
   /* USER CODE END MX_GPIO_Init_2 */
 }
 
 /* USER CODE BEGIN 4 */
+
+void HAL_GPIO_EXTI_Rising_Callback(uint16_t GPIO_Pin)
+{
+    // Bouton TX
+    if (GPIO_Pin == BTN_SEND_TEST_Pin)
+    {
+    	if (!rf_ook_proto_is_busy())
+    	{
+            char msg[] = "TX: Envoi en cours...\r\n";
+            HAL_UART_Transmit(&huart1, (uint8_t*)msg, strlen(msg), 100);
+
+            HAL_GPIO_WritePin(LED_GREEN_GPIO_Port, LED_GREEN_Pin, GPIO_PIN_RESET);
+
+			uint8_t node_addr = rf_ook_get_node_address();
+			rf_ook_proto_send_frame(node_addr, payload, payload_len);
+    	}
+    }
+    // Bouton RX
+    if (GPIO_Pin == RX_DATA_Pin)
+    {
+    }
+}
+
+void HAL_GPIO_EXTI_Falling_Callback(uint16_t GPIO_Pin)
+{
+	if (GPIO_Pin == RX_DATA_Pin) {
+
+	}
+}
 
 /* USER CODE END 4 */
 
@@ -743,14 +799,22 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
   rf_ook_tx_frame_t* tx_frame = rf_ook_proto_get_tx_frame();
   if (htim->Instance == TIM1 && tx_frame->active) {
 	  rf_ook_tx_send_bit(tx_frame);
+
+      if (!tx_frame->active) {
+          HAL_GPIO_WritePin(LED_GREEN_GPIO_Port, LED_GREEN_Pin, GPIO_PIN_RESET);
+      }
   }
 
   // Timer RX OOK
-  if (htim->Instance == TIM3)
-  {
-	  uint8_t bit = HAL_GPIO_ReadPin(RX_DATA_GPIO_Port, RX_DATA_Pin);
-	  rf_ook_rx_receive_bit(bit);
-  }
+//  if (htim->Instance == TIM3)
+//  {
+//	  uint8_t bit = HAL_GPIO_ReadPin(RX_DATA_GPIO_Port, RX_DATA_Pin);
+//	  rf_ook_rx_receive_bit(bit);
+//
+//      if (rf_ook_rx_is_frame_ready()) {
+//          HAL_GPIO_WritePin(LED_BLUE_GPIO_Port, LED_BLUE_Pin, GPIO_PIN_RESET);
+//      }
+//  }
 
   /* USER CODE END Callback 0 */
   if (htim->Instance == TIM17)
