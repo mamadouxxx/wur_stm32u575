@@ -58,4 +58,8 @@ uint8_t rf_ook_rx_get_frame(rf_ook_frame_t *frame);
  */
 bool rf_ook_rx_is_frame_ready(void);
 
+void rf_ook_rx_handle_edge(uint8_t current_level);
+bool rf_ook_rx_has_edges(void);
+void rf_ook_rx_process_queue(void);
+
 #endif /* RF_OOK_RX_H_ */

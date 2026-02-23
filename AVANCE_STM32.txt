@@ -142,3 +142,7 @@ MOdulation OOK :
 
 
 
+WUR (front) ---> IRQ (handle_edge) ---> edge_queue[16] ---> 
+main loop (process_queue) ---> rf_ook_rx_receive_bit() ---> 
+rx_current + buffer[8] ---> main loop (process_frame)
+

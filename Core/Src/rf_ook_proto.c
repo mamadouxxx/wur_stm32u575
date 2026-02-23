@@ -79,12 +79,9 @@ void rf_ook_proto_send_frame(uint8_t address, uint8_t *payload, uint8_t payload_
 
     tx_frame.byte_idx = 0;
 
-    /*-------Test sans sync et wait (en attente wur)---------*/
-    tx_frame.bit_idx = ADDRESS_BITS - 1;
-    tx_frame.state = TX_DEST_ADDRESS;
-    /*----------------*/
-//    tx_frame.bit_idx = SYNC_NB_BITS - 1;
-//    tx_frame.state = TX_SYNC;
+    /*-------Test sans wait (en attente wur)---------*/
+    tx_frame.bit_idx = ((SYNC_NB_BITS*2) - 1);
+    tx_frame.state = TX_SYNC;
     tx_frame.active = true;
     tx_frame.wait_ticks = 0;
 
@@ -161,27 +158,28 @@ void rf_ook_proto_handle_received_frame(void)
 
     /* Fast exit if no frame is ready */
     if (!rf_ook_rx_is_frame_ready()) {
+        char msg[64];
+        sprintf(msg, "not ready\r\n");
+        HAL_UART_Transmit(&huart1, (uint8_t*)msg, strlen(msg), 100);
+
         return;
     }
 
     /* Drain RX FIFO */
     while (rf_ook_rx_get_frame(&frame)) {
+        char msg[64];
+        sprintf(msg, "oui oui\r\n");
+        HAL_UART_Transmit(&huart1, (uint8_t*)msg, strlen(msg), 100);
+//        if (frame.dest_address != 1) {
+//            // trame parasite, on ignore
+//            continue;
+//        }
+//        if (frame.payload_len != sizeof(sensor_payload_t)) {
+//            // taille incohérente, on ignore
+//            continue;
+//        }
 
-        /* Example: address filtering */
-        if (frame.dest_address == 0) {
-            /* Frame intended for this node */
-            process_frame(&frame);
-        }
-        else {
-            char msg[50];
-            /* Optional: routing / forwarding */
-            // rf_ook_proto_send_frame(frame.address,
-            //                          frame.payload,
-            //                          frame.payload_len);
-            int len = sprintf(msg, "handler Frame: addr=%d len=%d\r\n",
-            frame.dest_address, frame.payload_len);
-            HAL_UART_Transmit(&huart1, (uint8_t*)msg, len, 100);
-        }
+        process_frame(&frame);
     }
 }
 

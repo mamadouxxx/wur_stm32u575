@@ -157,16 +157,12 @@ int main(void)
 
   while (1)
   {
-	  // Traiter la trame reçue dans la boucle principale (pas dans l'IRQ)
-	  if (rf_ook_rx_is_frame_ready())
-	  {
-		  HAL_TIM_Base_Stop_IT(&htim3);
-		  char msg[] = "=== Trame recue ! ===\r\n";
-		  HAL_UART_Transmit(&huart1, (uint8_t*)msg, strlen(msg), 100);
-		  rf_ook_proto_handle_received_frame();
+	  rf_ook_rx_process_queue();
+	  if (rf_ook_rx_is_frame_ready()) {
+	    	rf_ook_proto_handle_received_frame();
 	  }
 
-		HAL_Delay(10);  // Petite pause, pas 10 secondes !
+//		HAL_Delay(10);  // Petite pause, pas 10 secondes !
 
       /* lancez les capteurs */
 //      sensors_task();
@@ -768,16 +764,17 @@ void HAL_GPIO_EXTI_Rising_Callback(uint16_t GPIO_Pin)
 			rf_ook_proto_send_frame(node_addr, payload, payload_len);
     	}
     }
-    // Bouton RX
+
     if (GPIO_Pin == RX_DATA_Pin)
     {
+        rf_ook_rx_handle_edge(1);
     }
 }
 
 void HAL_GPIO_EXTI_Falling_Callback(uint16_t GPIO_Pin)
 {
 	if (GPIO_Pin == RX_DATA_Pin) {
-
+        rf_ook_rx_handle_edge(0);
 	}
 }
 

@@ -25,10 +25,12 @@
 #define RF_OOK_DEFAULT_BPS    1300
 
 /** @brief Number of synchronization bits per frame */
-#define SYNC_NB_BITS          6
+#define SYNC_NB_BITS          8
 
 /** @brief Synchronization pattern sent before each frame */
-#define SYNC_BITS_VALUE       0b101100
+#define SYNC_BITS_VALUE       0xAA
+
+#define SYNC_REPEAT			  2
 
 /** @brief Number of bits used for node addressing */
 #define ADDRESS_BITS          2
@@ -51,20 +53,24 @@
 /** @brief Maximum allowed payload size in bytes */
 #define MAX_PAYLOAD_SIZE      32
 
-#define TIMER_FREQ_HZ 16000000 // 16 MHz
-#define TIMER_TICK_US (1.0f / TIMER_FREQ_HZ * 1e6f) // durée d'un tick en µs
+#define EDGE_QUEUE_SIZE 64
+
+typedef struct {
+    uint32_t delta_ticks;   // Durée depuis le front précédent
+    uint8_t level;          // Niveau du plateau précédent (0 ou 1)
+} edge_event_t;
 
 /* -------------------------------------------------------------------------- */
 /*                               Frame structures                             */
 /* -------------------------------------------------------------------------- */
 
-typedef struct {
+typedef struct __attribute__((packed)) {
     uint16_t co2;
-    int16_t temp;      // °C * 100
-    uint16_t hum;      // % * 100
+    uint16_t temp;
+    uint16_t hum;
     uint16_t lux;
     uint16_t o2;
-    uint8_t motion;    // 0 ou 1
+    uint8_t  motion;
 } sensor_payload_t;
 
 /**
@@ -90,7 +96,7 @@ typedef struct {
  * Defines the different stages of frame transmission.
  */
 typedef enum {
-//    TX_SYNC = 0,    /**< Transmitting SYNC bits */
+    TX_SYNC = 0,    /**< Transmitting SYNC bits */
 //    TX_WAIT,        /**< Waiting for receiver wake-up delay */
     TX_LENGTH,     	/**< Payload Length */
     TX_DEST_ADDRESS,     /**< Transmitting address bits */

@@ -11,8 +11,18 @@
 
 #include "rf_ook_rx.h"
 #include <stdio.h>
+#include <string.h>
 extern TIM_HandleTypeDef htim3; /**< Timer used for microsecond delays and ISR */
 extern UART_HandleTypeDef huart1;
+
+volatile edge_event_t edge_queue[EDGE_QUEUE_SIZE];
+volatile uint8_t edge_head = 0;
+volatile uint8_t edge_tail = 0;
+volatile bool first_edge_received = false;
+
+// Variables pour calculer delta
+volatile uint32_t last_edge_time = 0;
+volatile uint8_t last_level = 0;
 
 /* -------------------------------------------------------------------------- */
 /*                               Internal RX FSM                               */
@@ -44,6 +54,10 @@ static volatile uint8_t rx_overflow_count = 0; /**< Number of frames lost due to
 void rf_ook_rx_init(void) {
     rx_state = RX_IDLE;
     rx_head = rx_tail = 0;
+    first_edge_received = false;
+    HAL_TIM_Base_Start(&htim3);
+    last_edge_time = TIM3->CNT;       // position de départ
+    last_level = HAL_GPIO_ReadPin(RX_DATA_GPIO_Port, RX_DATA_Pin); // niveau initial
 }
 
 /**
@@ -58,6 +72,59 @@ void rf_ook_rx_reset(void) {
     rx_byte_count = 0;
     rx_current.dest_address = 0;
     rx_current.payload_len = 0;
+    first_edge_received = false;
+}
+
+void rf_ook_rx_handle_edge(uint8_t current_level)
+{
+    uint32_t now = TIM3->CNT;
+    uint32_t delta = now - last_edge_time;
+
+    const uint32_t bit_ticks = 12304;
+
+    if(delta < (bit_ticks / 4)) {
+        return;  // on ne met PAS à jour last_edge_time
+    }
+
+    last_edge_time = now;  // ← déplacé ici, après le filtre
+
+    if(!first_edge_received) {
+        first_edge_received = true;
+        last_level = current_level;
+        return;
+    }
+    uint8_t next_head = (edge_head + 1) % EDGE_QUEUE_SIZE;
+    if(next_head != edge_tail) {
+        edge_queue[edge_head].delta_ticks = delta;
+        edge_queue[edge_head].level = last_level;
+        edge_head = next_head;
+//        rf_ook_rx_process_queue();
+    }
+
+    last_level = current_level;
+}
+
+void rf_ook_rx_process_queue(void)
+{
+    while (edge_tail != edge_head)
+    {
+        edge_event_t e = edge_queue[edge_tail];
+        edge_tail = (edge_tail + 1) % EDGE_QUEUE_SIZE;
+
+        // Nombre de bits à reconstruire
+        const uint32_t bit_ticks = 12304; // 769us * 16MHz
+        uint32_t nb_bits = (e.delta_ticks + bit_ticks/2) / bit_ticks;
+//        if(nb_bits == 0 || nb_bits > 8)
+//        {
+//            rf_ook_rx_reset();
+//            return;
+//        }
+
+        for (uint32_t i = 0; i < nb_bits; i++)
+        {
+            rf_ook_rx_receive_bit(e.level);
+        }
+    }
 }
 
 /**
@@ -77,9 +144,13 @@ void rf_ook_rx_receive_bit(uint8_t bit)
     switch (rx_state)
     {
         case RX_IDLE:
-        	rx_shift_reg = bit;
-        	rx_bit_count = 1;
-            rx_state = RX_DEST_ADDRESS;
+        	rx_shift_reg = ((rx_shift_reg << 1) | bit) & 0xFF;
+            if(rx_shift_reg == 0xAA)
+            {
+                rx_state = RX_DEST_ADDRESS;
+                rx_bit_count = 0;
+                rx_shift_reg = 0;
+            }
             break;
 
         case RX_DEST_ADDRESS:
@@ -125,28 +196,32 @@ void rf_ook_rx_receive_bit(uint8_t bit)
                     rx_current.payload[rx_byte_count] = rx_shift_reg;
                     rx_byte_count++;
                 }
+
+                // reset shift register pour le prochain octet
                 rx_bit_count = 0;
                 rx_shift_reg = 0;
-            }
 
-            if (rx_byte_count >= rx_current.payload_len)
-            {
-                if (rx_frame_count < BUFFER_SIZE)
+                // check fin de frame ici, après avoir fini un octet complet
+                if (rx_byte_count >= rx_current.payload_len)
                 {
-                    buffer[rx_head] = rx_current;
-                    rx_head = (rx_head + 1) % BUFFER_SIZE;
-                    rx_frame_count++;
+                    if (rx_frame_count < BUFFER_SIZE)
+                    {
+                        buffer[rx_head] = rx_current;
+                        rx_head = (rx_head + 1) % BUFFER_SIZE;
+                        rx_frame_count++;
+                    }
+                    else
+                    {
+                        rx_overflow_count++;
+                    }
+                    edge_tail = edge_head;
+                    rx_state = RX_DONE;
                 }
-                else
-                {
-                    rx_overflow_count++;
-                }
-				rx_state = RX_DONE;
             }
             break;
 
         case RX_DONE:
-//            HAL_TIM_Base_Stop_IT(&htim3);
+//            HAL_GPIO_WritePin(Switch_RF_GPIO_Port, Switch_RF_Pin, GPIO_PIN_SET);
             rf_ook_rx_reset();
         	break;
     }
