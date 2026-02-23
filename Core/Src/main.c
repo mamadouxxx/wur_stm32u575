@@ -23,6 +23,7 @@
 /* USER CODE BEGIN Includes */
 #include "app_sensors.h"
 #include "telemetry.h"
+#include "sensor_data.h"
 #include "rf_ook_proto.h"
 #include "rf_ook_rx.h"
 #include "rf_ook_tx.h"
@@ -54,6 +55,8 @@ ADC_HandleTypeDef hadc4;
 
 I2C_HandleTypeDef hi2c3;
 
+LPTIM_HandleTypeDef hlptim1;
+
 SPI_HandleTypeDef hspi1;
 
 TIM_HandleTypeDef htim1;
@@ -62,7 +65,7 @@ TIM_HandleTypeDef htim3;
 UART_HandleTypeDef huart1;
 
 /* USER CODE BEGIN PV */
-
+volatile bool tx_periodic_flag = false;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -77,6 +80,7 @@ static void MX_USART1_UART_Init(void);
 static void MX_SPI1_Init(void);
 static void MX_TIM1_Init(void);
 static void MX_TIM3_Init(void);
+static void MX_LPTIM1_Init(void);
 /* USER CODE BEGIN PFP */
 
 /* USER CODE END PFP */
@@ -127,6 +131,7 @@ int main(void)
   MX_SPI1_Init();
   MX_TIM1_Init();
   MX_TIM3_Init();
+  MX_LPTIM1_Init();
   /* USER CODE BEGIN 2 */
 
   /* USER CODE END 2 */
@@ -143,14 +148,15 @@ int main(void)
   /* init du protocole de communication */
   rf_ook_proto_init();
 
-  sensor_payload_t sensors;
+  /* LOW POWER TIMER 1 pour envoie mesures */
+//  HAL_LPTIM_Counter_Start_IT(&hlptim1);
 
-  sensors.co2 = 450;
-  sensors.temp = 2345;
-  sensors.hum = 5512;
-  sensors.lux = 120;
-  sensors.o2 = 210;
-  sensors.motion = 1;
+  sensors.co2 = 222;
+  sensors.temp = 567;
+  sensors.hum = 65;
+  sensors.lux = 4096;
+  sensors.o2 = 223;
+  sensors.motion = 0; /* No motion sensor for now */
 
   memcpy(payload, &sensors, sizeof(sensor_payload_t));
   payload_len = sizeof(sensor_payload_t);
@@ -162,12 +168,32 @@ int main(void)
 	    	rf_ook_proto_handle_received_frame();
 	  }
 
-//		HAL_Delay(10);  // Petite pause, pas 10 secondes !
-
-      /* lancez les capteurs */
-//      sensors_task();
-//      telemetry_send_uart();
-//      HAL_Delay(2000);
+//	  if (tx_periodic_flag) {
+//	      tx_periodic_flag = false;
+//
+//	      /* lancez les capteurs */
+//	      sensors_task();
+//
+//	      sensors.co2 = sensor_data_get_co2();
+//	      sensors.temp = sensor_data_get_temperature();
+//	      sensors.hum = sensor_data_get_humidity();
+//	      sensors.lux = sensor_data_get_lux();
+//	      sensors.o2 = sensor_data_get_o2();
+//	      sensors.motion = 0; /* No motion sensor for now */
+//
+//	      memcpy(payload, &sensors, sizeof(sensor_payload_t));
+//	      payload_len = sizeof(sensor_payload_t);
+//
+//	      telemetry_send_uart();
+//
+//	      if (!rf_ook_proto_is_busy()) {
+//				uint8_t dest_addr = rf_ook_get_node_address();
+//	            char msg[] = "TX: Envoi en cours...\r\n";
+//	            HAL_UART_Transmit(&huart1, (uint8_t*)msg, strlen(msg), 100);
+//	          rf_ook_proto_send_frame(dest_addr, payload, payload_len);
+//	      }
+//
+//	  }
 
     /* USER CODE END WHILE */
 
@@ -192,9 +218,15 @@ void SystemClock_Config(void)
     Error_Handler();
   }
 
+  /** Configure LSE Drive Capability
+  */
+  HAL_PWR_EnableBkUpAccess();
+  __HAL_RCC_LSEDRIVE_CONFIG(RCC_LSEDRIVE_LOW);
+
   /** Initializes the CPU, AHB and APB buses clocks
   */
-  RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSI;
+  RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSI|RCC_OSCILLATORTYPE_LSE;
+  RCC_OscInitStruct.LSEState = RCC_LSE_ON;
   RCC_OscInitStruct.HSIState = RCC_HSI_ON;
   RCC_OscInitStruct.HSICalibrationValue = RCC_HSICALIBRATION_DEFAULT;
   RCC_OscInitStruct.PLL.PLLState = RCC_PLL_NONE;
@@ -447,6 +479,41 @@ static void MX_ICACHE_Init(void)
 }
 
 /**
+  * @brief LPTIM1 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_LPTIM1_Init(void)
+{
+
+  /* USER CODE BEGIN LPTIM1_Init 0 */
+
+  /* USER CODE END LPTIM1_Init 0 */
+
+  /* USER CODE BEGIN LPTIM1_Init 1 */
+
+  /* USER CODE END LPTIM1_Init 1 */
+  hlptim1.Instance = LPTIM1;
+  hlptim1.Init.Clock.Source = LPTIM_CLOCKSOURCE_APBCLOCK_LPOSC;
+  hlptim1.Init.Clock.Prescaler = LPTIM_PRESCALER_DIV128;
+  hlptim1.Init.Trigger.Source = LPTIM_TRIGSOURCE_SOFTWARE;
+  hlptim1.Init.Period = 2559;
+  hlptim1.Init.UpdateMode = LPTIM_UPDATE_IMMEDIATE;
+  hlptim1.Init.CounterSource = LPTIM_COUNTERSOURCE_INTERNAL;
+  hlptim1.Init.Input1Source = LPTIM_INPUT1SOURCE_GPIO;
+  hlptim1.Init.Input2Source = LPTIM_INPUT2SOURCE_GPIO;
+  hlptim1.Init.RepetitionCounter = 0;
+  if (HAL_LPTIM_Init(&hlptim1) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN LPTIM1_Init 2 */
+
+  /* USER CODE END LPTIM1_Init 2 */
+
+}
+
+/**
   * @brief SPI1 Initialization Function
   * @param None
   * @retval None
@@ -656,8 +723,8 @@ static void MX_GPIO_Init(void)
   /* USER CODE END MX_GPIO_Init_1 */
 
   /* GPIO Ports Clock Enable */
-  __HAL_RCC_GPIOH_CLK_ENABLE();
   __HAL_RCC_GPIOC_CLK_ENABLE();
+  __HAL_RCC_GPIOH_CLK_ENABLE();
   __HAL_RCC_GPIOA_CLK_ENABLE();
   __HAL_RCC_GPIOF_CLK_ENABLE();
   __HAL_RCC_GPIOB_CLK_ENABLE();
@@ -774,6 +841,13 @@ void HAL_GPIO_EXTI_Falling_Callback(uint16_t GPIO_Pin)
 	if (GPIO_Pin == RX_DATA_Pin) {
         rf_ook_rx_handle_edge(0);
 	}
+}
+
+void HAL_LPTIM_AutoReloadMatchCallback(LPTIM_HandleTypeDef *hlptim)
+{
+    if (hlptim->Instance == LPTIM1) {
+        tx_periodic_flag = true;
+    }
 }
 
 /* USER CODE END 4 */

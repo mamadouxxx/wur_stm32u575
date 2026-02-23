@@ -76,15 +76,12 @@ void rf_ook_rx_reset(void) {
     rx_byte_count = 0;
     rx_current.dest_address = 0;
     rx_current.payload_len = 0;
-    first_edge_received = false;
 }
 
 void rf_ook_rx_handle_edge(uint8_t current_level)
 {
     uint32_t now = TIM3->CNT;
     uint32_t delta = now - last_edge_time;
-
-    const uint32_t bit_ticks = 12304;
 
     if(delta < EDGE_FILTER_TICKS) {
         return;
@@ -99,8 +96,8 @@ void rf_ook_rx_handle_edge(uint8_t current_level)
     }
     uint8_t next_head = (edge_head + 1) % EDGE_QUEUE_SIZE;
     if(next_head != edge_tail) {
-        char msg[] = "TX: Reception en cours 11...\r\n";
-        HAL_UART_Transmit(&huart1, (uint8_t*)msg, strlen(msg), 100);
+//        char msg[] = "TX: Reception en cours 11...\r\n";
+//        HAL_UART_Transmit(&huart1, (uint8_t*)msg, strlen(msg), 100);
 
         edge_queue[edge_head].delta_ticks = delta;
         edge_queue[edge_head].level = last_level;

@@ -101,7 +101,7 @@ void rf_ook_tx_send_bit(rf_ook_tx_frame_t *frame)
         case TX_SYNC:
             bit = (frame->frame.sync_bits >> frame->bit_idx) & 1;
             if(frame->bit_idx == 0) {
-                frame->state = TX_DEST_ADDRESS;
+                frame->state = TX_SRC_ADDRESS;
                 frame->bit_idx = ADDRESS_BITS - 1;
             } else {
                 frame->bit_idx--;
@@ -120,7 +120,7 @@ void rf_ook_tx_send_bit(rf_ook_tx_frame_t *frame)
             bit = (frame->frame.src_address >> frame->bit_idx) & 1;
             if(frame->bit_idx == 0) {
                 frame->state   = TX_DEST_ADDRESS;
-                frame->bit_idx = 7;
+                frame->bit_idx = ADDRESS_BITS - 1;
             } else {
                 frame->bit_idx--;
             }

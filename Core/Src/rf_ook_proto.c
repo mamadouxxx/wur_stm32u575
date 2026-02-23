@@ -181,10 +181,6 @@ void rf_ook_proto_handle_received_frame(void)
 
     /* Fast exit if no frame is ready */
     if (!rf_ook_rx_is_frame_ready()) {
-        char msg[64];
-        sprintf(msg, "not ready\r\n");
-        HAL_UART_Transmit(&huart1, (uint8_t*)msg, strlen(msg), 100);
-
         return;
     }
 

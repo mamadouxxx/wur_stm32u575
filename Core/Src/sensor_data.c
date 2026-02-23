@@ -27,6 +27,10 @@ void sensor_data_update_lux(uint32_t lux)
 	g_sensor_data.lux_raw = lux;
 }
 
+void sensor_data_update_motion(uint8_t motion) {
+	g_sensor_data.motion_raw = motion;
+}
+
 float sensor_data_get_co2(void)
 {
     return g_sensor_data.co2_ppm;
@@ -52,4 +56,7 @@ uint32_t sensor_data_get_lux(void)
     return g_sensor_data.lux_raw;
 }
 
+uint8_t sensor_data_get_motion(void) {
+	return g_sensor_data.motion_raw;
+}
 
