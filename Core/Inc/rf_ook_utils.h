@@ -21,22 +21,27 @@
 /*                               Protocol constants                           */
 /* -------------------------------------------------------------------------- */
 
+#define TTL_MAX 3
+
+// Macros utilitaires
+#define GET_SEQ(seq_ttl)  (((seq_ttl) >> 4) & 0x0F)
+#define GET_TTL(seq_ttl)  ((seq_ttl) & 0x0F)
+#define MAKE_SEQ_TTL(seq, ttl) ((((seq) & 0x0F) << 4) | ((ttl) & 0x0F))
+
 /** @brief Default bitrate for OOK communication (bits per second) */
-#define RF_OOK_DEFAULT_BPS    1300
+#define RF_OOK_DEFAULT_BPS    1300UL
 
 /** @brief Number of synchronization bits per frame */
-#define SYNC_NB_BITS          8
+#define SYNC_NB_BITS          16
 
 /** @brief Synchronization pattern sent before each frame */
-#define SYNC_BITS_VALUE       0xAA
-
-#define SYNC_REPEAT			  2
+#define SYNC_BITS_VALUE       0xAAAA
 
 /** @brief Number of bits used for node addressing */
 #define ADDRESS_BITS          2
 
 /** @brief Duration of a single bit in microseconds (based on bitrate) */
-#define BIT_US                (1000000 / RF_OOK_DEFAULT_BPS)
+#define BIT_US                (1000000UL / RF_OOK_DEFAULT_BPS)
 
 /** @brief Transmitter stabilization time before sending data (microseconds) */
 #define TX_STABILIZATION_US   1000
@@ -48,12 +53,24 @@
 #define LENGTH_BITS           8
 
 /** @brief Number of frames that can be buffered in RX FIFO */
-#define BUFFER_SIZE           8
+#define BUFFER_SIZE           4
 
 /** @brief Maximum allowed payload size in bytes */
 #define MAX_PAYLOAD_SIZE      32
 
-#define EDGE_QUEUE_SIZE 64
+#define EDGE_QUEUE_SIZE 32
+
+// Fréquence horloge
+#define TIMER_FREQ_HZ           16000000UL      // 16 MHz
+
+// Durée d'un bit en ticks TIM3
+#define BIT_TICKS               (TIMER_FREQ_HZ / RF_OOK_DEFAULT_BPS)     // 12307 ticks
+
+// Filtre anti-rebond : 1/4 de bit
+#define EDGE_FILTER_TICKS       (BIT_TICKS / 4)
+
+// Timeout FSM RX : 20 bits de silence
+#define RX_TIMEOUT_TICKS        (BIT_TICKS * 20)
 
 typedef struct {
     uint32_t delta_ticks;   // Durée depuis le front précédent
@@ -80,10 +97,13 @@ typedef struct __attribute__((packed)) {
  * (or before encoding), excluding timing and physical layer information.
  */
 typedef struct {
-    uint8_t sync_bits;                      /**< Synchronization pattern */
+    uint16_t sync_bits;                      /**< Synchronization pattern */
+    uint8_t  src_address;
     uint8_t dest_address;                        /**< Node address */
-    uint8_t payload[MAX_PAYLOAD_SIZE];      /**< Payload data */
+    uint8_t  seq_ttl;
     uint8_t payload_len;                    /**< Payload length in bytes */
+    uint8_t payload[MAX_PAYLOAD_SIZE];      /**< Payload data */
+    uint8_t  crc;
 } rf_ook_frame_t;
 
 /* -------------------------------------------------------------------------- */
@@ -99,8 +119,11 @@ typedef enum {
     TX_SYNC = 0,    /**< Transmitting SYNC bits */
 //    TX_WAIT,        /**< Waiting for receiver wake-up delay */
     TX_LENGTH,     	/**< Payload Length */
+	TX_SRC_ADDRESS,
     TX_DEST_ADDRESS,     /**< Transmitting address bits */
+	TX_SEQ_TTL,
     TX_PAYLOAD,     /**< Transmitting payload bits */
+	TX_CRC,
     TX_DONE         /**< Transmission completed */
 } tx_state_t;
 
@@ -110,10 +133,13 @@ typedef enum {
  * Defines the different stages of frame reception.
  */
 typedef enum {
-    RX_IDLE = 0,    /**< Waiting for address bits */
-    RX_DEST_ADDRESS,     /**< Receiving address bits */
+    RX_SYNC = 0,    /**< Waiting for address bits */
     RX_LENGTH,     	/**< Payload length */
+	RX_SRC_ADDRESS,
+    RX_DEST_ADDRESS,     /**< Receiving address bits */
+	RX_SEQ_TTL,
     RX_PAYLOAD,      /**< Receiving payload bits */
+	RX_CRC,
 	RX_DONE			/**< Transmission completed */
 } rx_state_t;
 
@@ -135,5 +161,17 @@ typedef struct {
     volatile bool active;            /**< Indicates if a transmission is active */
     uint16_t wait_ticks;    /**< Counter used during TX_WAIT state */
 } rf_ook_tx_frame_t;
+
+
+static inline uint8_t rf_ook_compute_crc(rf_ook_frame_t *frame)
+{
+    uint8_t crc = 0;
+    crc ^= frame->dest_address;
+    crc ^= frame->src_address;
+    crc ^= frame->seq_ttl;
+    crc ^= frame->payload_len;
+    for(uint8_t i = 0; i < frame->payload_len; i++) crc ^= frame->payload[i];
+    return crc;
+}
 
 #endif /* RF_OOK_TYPES_H_ */

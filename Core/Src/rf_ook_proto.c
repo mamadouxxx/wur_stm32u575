@@ -15,11 +15,15 @@
 #include <string.h>
 
 extern UART_HandleTypeDef huart1;
+extern TIM_HandleTypeDef htim1;     /**< Timer used for microsecond delays and TX ISR */
 
 static const uint8_t NODE_ADDRESS = 1;
 static rf_ook_tx_frame_t tx_frame;  /**< Runtime context of current TX frame */
 
-extern TIM_HandleTypeDef htim1;     /**< Timer used for microsecond delays and TX ISR */
+static uint8_t seq_num = 0;
+
+static void rf_ook_proto_forward_frame(rf_ook_frame_t *frame);
+static void process_frame(rf_ook_frame_t *frame);
 
 /* -------------------------------------------------------------------------- */
 /*                            Protocol initialization                        */
@@ -56,31 +60,28 @@ void rf_ook_proto_init(void)
  * @param payload           Pointer to payload data
  * @param payload_len_bytes Number of bytes in the payload
  */
-void rf_ook_proto_send_frame(uint8_t address, uint8_t *payload, uint8_t payload_len_bytes)
+void rf_ook_proto_send_frame(uint8_t dest_address, uint8_t *payload, uint8_t payload_len_bytes)
 {
-    if (tx_frame.active) {
-        return; // Transmission already in progress
-    }
-
-    if ( payload_len_bytes > MAX_PAYLOAD_SIZE  ){
-        return;
-    }
-
-    if (payload == NULL && payload_len_bytes > 0) {
-        return;
-    }
+    if (tx_frame.active) return;
+    if (payload_len_bytes > MAX_PAYLOAD_SIZE) return;
+    if (payload == NULL && payload_len_bytes > 0) return;
 
     // Initialize TX frame
     tx_frame.frame.sync_bits = SYNC_BITS_VALUE;
-    tx_frame.frame.dest_address = address;
-    for(uint8_t i = 0; i < payload_len_bytes; i++)
-        tx_frame.frame.payload[i] = payload[i];
+    tx_frame.frame.src_address  = NODE_ADDRESS;
+    tx_frame.frame.dest_address = dest_address;
+    tx_frame.frame.seq_ttl = MAKE_SEQ_TTL(seq_num, TTL_MAX);
+    seq_num = (seq_num + 1) & 0x0F;
+    memcpy(tx_frame.frame.payload, payload, payload_len_bytes);
     tx_frame.frame.payload_len = payload_len_bytes;
 
-    tx_frame.byte_idx = 0;
+    // Calcul CRC
+    tx_frame.frame.crc = rf_ook_compute_crc(&tx_frame.frame);
+
 
     /*-------Test sans wait (en attente wur)---------*/
-    tx_frame.bit_idx = ((SYNC_NB_BITS*2) - 1);
+    tx_frame.byte_idx = 0;
+    tx_frame.bit_idx = SYNC_NB_BITS - 1;
     tx_frame.state = TX_SYNC;
     tx_frame.active = true;
     tx_frame.wait_ticks = 0;
@@ -89,6 +90,28 @@ void rf_ook_proto_send_frame(uint8_t address, uint8_t *payload, uint8_t payload_
     rf_ook_tx_start_tx();
 
     // Start timer for ISR-driven bit sending
+    __HAL_TIM_SET_COUNTER(&htim1, 0);
+    HAL_TIM_Base_Start_IT(&htim1);
+}
+
+static void rf_ook_proto_forward_frame(rf_ook_frame_t *frame)
+{
+    if (tx_frame.active) return;
+
+    // TTL décrémenté
+    tx_frame.frame = *frame;
+    tx_frame.frame.seq_ttl = MAKE_SEQ_TTL(GET_SEQ(frame->seq_ttl), GET_TTL(frame->seq_ttl) - 1);
+
+    // Recalcul CRC
+    tx_frame.frame.crc = rf_ook_compute_crc(&tx_frame.frame);
+
+    tx_frame.byte_idx   = 0;
+    tx_frame.bit_idx    = SYNC_NB_BITS - 1;
+    tx_frame.state      = TX_SYNC;
+    tx_frame.active     = true;
+    tx_frame.wait_ticks = 0;
+
+    rf_ook_tx_start_tx();
     __HAL_TIM_SET_COUNTER(&htim1, 0);
     HAL_TIM_Base_Start_IT(&htim1);
 }
@@ -102,13 +125,13 @@ void rf_ook_proto_send_frame(uint8_t address, uint8_t *payload, uint8_t payload_
  */
 static void process_frame(rf_ook_frame_t *frame)
 {
-    // Vérifier la taille
-//    if (frame->payload_len != sizeof(sensor_payload_t)) {
-//        char msg[50];
-//        int len = sprintf(msg, "Invalid frame size: %d\r\n", frame->payload_len);
-//        HAL_UART_Transmit(&huart1, (uint8_t*)msg, len, 100);
-//        return;
-//    }
+//     Vérifier la taille
+    if (frame->payload_len != sizeof(sensor_payload_t)) {
+        char msg[50];
+        int len = sprintf(msg, "Invalid frame size: %d\r\n", frame->payload_len);
+        HAL_UART_Transmit(&huart1, (uint8_t*)msg, len, 100);
+        return;
+    }
 
     // Extraire les données
     sensor_payload_t sensors;
@@ -167,19 +190,24 @@ void rf_ook_proto_handle_received_frame(void)
 
     /* Drain RX FIFO */
     while (rf_ook_rx_get_frame(&frame)) {
-        char msg[64];
-        sprintf(msg, "oui oui\r\n");
-        HAL_UART_Transmit(&huart1, (uint8_t*)msg, strlen(msg), 100);
-//        if (frame.dest_address != 1) {
-//            // trame parasite, on ignore
-//            continue;
-//        }
-//        if (frame.payload_len != sizeof(sensor_payload_t)) {
-//            // taille incohérente, on ignore
-//            continue;
-//        }
 
-        process_frame(&frame);
+        // Vérification CRC
+        if (rf_ook_compute_crc(&frame) != frame.crc) {
+            char msg[] = "CRC ERROR\r\n";
+            HAL_UART_Transmit(&huart1, (uint8_t*)msg, strlen(msg), 100);
+            continue;
+        }
+
+        // Trame pour nous
+        if (frame.dest_address == NODE_ADDRESS) {
+            process_frame(&frame);
+        }
+        // Retransmission
+        else {
+            uint8_t ttl = GET_TTL(frame.seq_ttl);
+            if (ttl == 0) continue;
+            rf_ook_proto_forward_frame(&frame);
+        }
     }
 }
 

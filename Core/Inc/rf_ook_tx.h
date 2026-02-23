@@ -16,7 +16,7 @@ extern "C" {
 #endif
 
 #include <stdint.h>
-#include "rf_ook_types.h"
+#include <rf_ook_utils.h>
 #include <stdbool.h>
 #include "main.h"
 

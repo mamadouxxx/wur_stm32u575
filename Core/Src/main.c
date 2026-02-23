@@ -758,8 +758,6 @@ void HAL_GPIO_EXTI_Rising_Callback(uint16_t GPIO_Pin)
             char msg[] = "TX: Envoi en cours...\r\n";
             HAL_UART_Transmit(&huart1, (uint8_t*)msg, strlen(msg), 100);
 
-            HAL_GPIO_WritePin(LED_GREEN_GPIO_Port, LED_GREEN_Pin, GPIO_PIN_RESET);
-
 			uint8_t node_addr = rf_ook_get_node_address();
 			rf_ook_proto_send_frame(node_addr, payload, payload_len);
     	}

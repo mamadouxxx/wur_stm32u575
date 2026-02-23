@@ -116,12 +116,32 @@ void rf_ook_tx_send_bit(rf_ook_tx_frame_t *frame)
 //            }
 //            return; // no bit is sent during wait
 
+        case TX_SRC_ADDRESS:
+            bit = (frame->frame.src_address >> frame->bit_idx) & 1;
+            if(frame->bit_idx == 0) {
+                frame->state   = TX_DEST_ADDRESS;
+                frame->bit_idx = 7;
+            } else {
+                frame->bit_idx--;
+            }
+            break;
+
         case TX_DEST_ADDRESS:
             bit = (frame->frame.dest_address >> frame->bit_idx) & 1;
             if(frame->bit_idx == 0) {
-                frame->state = TX_LENGTH;
+                frame->state = TX_SEQ_TTL;;
                 frame->bit_idx = 7;
                 frame->byte_idx = 0;
+            } else {
+                frame->bit_idx--;
+            }
+            break;
+
+        case TX_SEQ_TTL:
+            bit = (frame->frame.seq_ttl >> frame->bit_idx) & 1;
+            if(frame->bit_idx == 0) {
+                frame->state   = TX_LENGTH;
+                frame->bit_idx = 7;
             } else {
                 frame->bit_idx--;
             }
@@ -152,7 +172,16 @@ void rf_ook_tx_send_bit(rf_ook_tx_frame_t *frame)
             }
 
             if(frame->byte_idx >= frame->frame.payload_len) {
+                frame->state = TX_CRC;
+            }
+            break;
+
+        case TX_CRC:
+            bit = (frame->frame.crc >> frame->bit_idx) & 1;
+            if(frame->bit_idx == 0) {
                 frame->state = TX_DONE;
+            } else {
+                frame->bit_idx--;
             }
             break;
 

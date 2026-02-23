@@ -24,11 +24,14 @@ volatile bool first_edge_received = false;
 volatile uint32_t last_edge_time = 0;
 volatile uint8_t last_level = 0;
 
+static uint32_t rx_last_bit_time = 0;
+
 /* -------------------------------------------------------------------------- */
 /*                               Internal RX FSM                               */
 /* -------------------------------------------------------------------------- */
-static rx_state_t rx_state = RX_IDLE; /**< Current RX FSM state */
+static rx_state_t rx_state = RX_SYNC; /**< Current RX FSM state */
 static uint8_t rx_shift_reg = 0;      /**< Bit shift register */
+static uint16_t rx_sync_reg = 0;  // shift reg 16 bits uniquement pour la détection sync
 static uint8_t rx_bit_count = 0;      /**< Number of bits received for current field */
 static uint8_t rx_byte_count = 0;    /**< Number of datas bytes received */
 static rf_ook_frame_t rx_current;     /**< Current frame being received */
@@ -52,7 +55,7 @@ static volatile uint8_t rx_overflow_count = 0; /**< Number of frames lost due to
  * Resets FSM state and buffer indices.
  */
 void rf_ook_rx_init(void) {
-    rx_state = RX_IDLE;
+    rx_state = RX_SYNC;
     rx_head = rx_tail = 0;
     first_edge_received = false;
     HAL_TIM_Base_Start(&htim3);
@@ -66,8 +69,9 @@ void rf_ook_rx_init(void) {
  * Clears internal counters and prepares FSM for new frame reception.
  */
 void rf_ook_rx_reset(void) {
-    rx_state = RX_IDLE;
+    rx_state = RX_SYNC;
     rx_shift_reg = 0;
+    rx_sync_reg = 0;
     rx_bit_count = 0;
     rx_byte_count = 0;
     rx_current.dest_address = 0;
@@ -82,11 +86,11 @@ void rf_ook_rx_handle_edge(uint8_t current_level)
 
     const uint32_t bit_ticks = 12304;
 
-    if(delta < (bit_ticks / 4)) {
-        return;  // on ne met PAS à jour last_edge_time
+    if(delta < EDGE_FILTER_TICKS) {
+        return;
     }
 
-    last_edge_time = now;  // ← déplacé ici, après le filtre
+    last_edge_time = now;
 
     if(!first_edge_received) {
         first_edge_received = true;
@@ -95,6 +99,9 @@ void rf_ook_rx_handle_edge(uint8_t current_level)
     }
     uint8_t next_head = (edge_head + 1) % EDGE_QUEUE_SIZE;
     if(next_head != edge_tail) {
+        char msg[] = "TX: Reception en cours 11...\r\n";
+        HAL_UART_Transmit(&huart1, (uint8_t*)msg, strlen(msg), 100);
+
         edge_queue[edge_head].delta_ticks = delta;
         edge_queue[edge_head].level = last_level;
         edge_head = next_head;
@@ -106,19 +113,19 @@ void rf_ook_rx_handle_edge(uint8_t current_level)
 
 void rf_ook_rx_process_queue(void)
 {
+	if (rx_state != RX_SYNC && rx_state != RX_DONE) {
+	    uint32_t now = TIM3->CNT;
+	    if ((now - rx_last_bit_time) > RX_TIMEOUT_TICKS) {
+	        rf_ook_rx_reset();
+	    }
+	}
+
     while (edge_tail != edge_head)
     {
         edge_event_t e = edge_queue[edge_tail];
         edge_tail = (edge_tail + 1) % EDGE_QUEUE_SIZE;
 
-        // Nombre de bits à reconstruire
-        const uint32_t bit_ticks = 12304; // 769us * 16MHz
-        uint32_t nb_bits = (e.delta_ticks + bit_ticks/2) / bit_ticks;
-//        if(nb_bits == 0 || nb_bits > 8)
-//        {
-//            rf_ook_rx_reset();
-//            return;
-//        }
+        uint32_t nb_bits = (e.delta_ticks + BIT_TICKS/2) / BIT_TICKS;
 
         for (uint32_t i = 0; i < nb_bits; i++)
         {
@@ -141,13 +148,28 @@ void rf_ook_rx_process_queue(void)
  */
 void rf_ook_rx_receive_bit(uint8_t bit)
 {
+	rx_last_bit_time = TIM3->CNT;
+
     switch (rx_state)
     {
-        case RX_IDLE:
-        	rx_shift_reg = ((rx_shift_reg << 1) | bit) & 0xFF;
-            if(rx_shift_reg == 0xAA)
+        case RX_SYNC:
+            rx_sync_reg = (rx_sync_reg << 1) | (bit & 0x01);
+            if(rx_sync_reg == 0xAAAA)
             {
-                rx_state = RX_DEST_ADDRESS;
+                rx_state = RX_SRC_ADDRESS;
+                rx_bit_count = 0;
+                rx_sync_reg = 0;
+                rx_shift_reg = 0;
+            }
+            break;
+
+        case RX_SRC_ADDRESS:
+            rx_shift_reg = (rx_shift_reg << 1) | (bit & 0x01);
+            rx_bit_count++;
+            if (rx_bit_count >= ADDRESS_BITS)
+            {
+                rx_current.src_address = rx_shift_reg & ((1 << ADDRESS_BITS) - 1);
+                rx_state     = RX_DEST_ADDRESS;
                 rx_bit_count = 0;
                 rx_shift_reg = 0;
             }
@@ -159,8 +181,20 @@ void rf_ook_rx_receive_bit(uint8_t bit)
 
             if (rx_bit_count >= ADDRESS_BITS)
             {
-                rx_current.dest_address = rx_shift_reg;
-                rx_state = RX_LENGTH;
+                rx_current.dest_address = rx_shift_reg & ((1 << ADDRESS_BITS) - 1);
+                rx_state = RX_SEQ_TTL;
+                rx_bit_count = 0;
+                rx_shift_reg = 0;
+            }
+            break;
+
+        case RX_SEQ_TTL:
+            rx_shift_reg = (rx_shift_reg << 1) | (bit & 0x01);
+            rx_bit_count++;
+            if (rx_bit_count >= 8)
+            {
+                rx_current.seq_ttl = rx_shift_reg;
+                rx_state     = RX_LENGTH;
                 rx_bit_count = 0;
                 rx_shift_reg = 0;
             }
@@ -197,26 +231,31 @@ void rf_ook_rx_receive_bit(uint8_t bit)
                     rx_byte_count++;
                 }
 
-                // reset shift register pour le prochain octet
                 rx_bit_count = 0;
                 rx_shift_reg = 0;
 
-                // check fin de frame ici, après avoir fini un octet complet
                 if (rx_byte_count >= rx_current.payload_len)
                 {
-                    if (rx_frame_count < BUFFER_SIZE)
-                    {
-                        buffer[rx_head] = rx_current;
-                        rx_head = (rx_head + 1) % BUFFER_SIZE;
-                        rx_frame_count++;
-                    }
-                    else
-                    {
-                        rx_overflow_count++;
-                    }
-                    edge_tail = edge_head;
-                    rx_state = RX_DONE;
+                    rx_state     = RX_CRC;
                 }
+            }
+            break;
+
+        case RX_CRC:
+            rx_shift_reg = (rx_shift_reg << 1) | (bit & 0x01);
+            rx_bit_count++;
+            if (rx_bit_count >= 8)
+            {
+                rx_current.crc = rx_shift_reg;
+
+                if (rx_frame_count < BUFFER_SIZE) {
+                    buffer[rx_head] = rx_current;
+                    rx_head = (rx_head + 1) % BUFFER_SIZE;
+                    rx_frame_count++;
+                } else {
+                    rx_overflow_count++;
+                }
+                rx_state = RX_DONE;
             }
             break;
 

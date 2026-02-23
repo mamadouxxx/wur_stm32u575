@@ -12,8 +12,8 @@
 #ifndef RF_OOK_PROTO_H_
 #define RF_OOK_PROTO_H_
 
+#include <rf_ook_utils.h>
 #include <stdint.h>
-#include "rf_ook_types.h"
 #include "main.h"
 
 #ifdef __cplusplus
