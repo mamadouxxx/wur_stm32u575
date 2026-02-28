@@ -204,6 +204,29 @@ Le code atteint bien `HAL_PWREx_EnterSTOP2Mode()`. Les registres `NVIC->ISPR` so
 
 ---
 
+## Générer la documentation
+
+### Prérequis
+```bash
+sudo apt install doxygen
+```
+
+### Génération
+```bash
+doxygen Doxyfile
+```
+
+### Consultation
+
+Ouvrir `docs/html/index.html` dans un navigateur.
+
+### Remarque
+
+Le dossier `docs/` est exclu du dépôt Git (voir `.gitignore`).
+La documentation est entièrement régénérée à chaque exécution de la commande ci-dessus.
+
+---
+
 ## Prerequis
 
 - STM32CubeIDE
