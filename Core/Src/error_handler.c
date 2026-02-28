@@ -1,11 +1,12 @@
-/*
- *
- *  Created on: 21 janv. 2026
- *      Author: mamadou
- *
 /**
- * @file error_handler.c
- * @brief Firmware error handling implementation.
+ * @file    error_handler.c
+ * @author  Mamadou
+ * @date    21 jan 2026
+ * @brief   Implémentation de la gestion des erreurs firmware
+ *
+ * Fournit les fonctions de signalement d'erreurs critiques et d'avertissements
+ * via UART et LED. Les erreurs critiques désactivent les interruptions et
+ * notifient le système (gestionnaire de démarrage, watchdog, etc.).
  */
 
 #include "error_handler.h"
@@ -13,7 +14,7 @@
 #include "main.h"
 #include <stdio.h>
 
-/* Weak hook for system-level fatal error handling (boot manager) */
+/* Hook faible pour la gestion des erreurs fatales au niveau système (boot manager) */
 __attribute__((weak))
 void system_fatal_error_notify(ErrorCode_t code)
 {
@@ -21,10 +22,10 @@ void system_fatal_error_notify(ErrorCode_t code)
 }
 
 /**
- * @brief Blink error LED a given number of times.
+ * @brief Fait clignoter la LED d'erreur un nombre de fois donné
  *
- * @param times      Number of blinks
- * @param delay_ms   Delay between toggles in milliseconds
+ * @param times     Nombre de clignotements
+ * @param delay_ms  Délai entre chaque basculement en millisecondes
  */
 static void blink_led(uint8_t times, uint16_t delay_ms)
 {
@@ -40,21 +41,21 @@ void FW_Error_Handler(ErrorCode_t code, const char* msg)
 {
     __disable_irq();
 
-    /* Log critical error */
+    /* Journalisation de l'erreur critique */
     if (msg != NULL) {
         uint8_t buf[128];
         int len = snprintf((char*)buf, sizeof(buf),
-                           "CRITICAL ERROR [%u]: %s\r\n",
+                           "ERREUR CRITIQUE [%u]: %s\r\n",
                            (unsigned)code, msg);
         if (len > 0) {
             hal_uart1_write(buf, (uint16_t)len);
         }
     }
 
-    /* Visual indication: fast blinking */
+    /* Indication visuelle : clignotement rapide */
     blink_led(3, 100);
 
-    /* Notify system (boot manager, watchdog logic, etc.) */
+    /* Notification système (boot manager, watchdog, etc.) */
     system_fatal_error_notify(code);
 
     __enable_irq();
@@ -62,17 +63,17 @@ void FW_Error_Handler(ErrorCode_t code, const char* msg)
 
 void Error_Warning(ErrorCode_t code, const char* msg)
 {
-    /* Log warning */
+    /* Journalisation de l'avertissement */
     if (msg != NULL) {
         uint8_t buf[128];
         int len = snprintf((char*)buf, sizeof(buf),
-                           "WARNING [%u]: %s\r\n",
+                           "AVERTISSEMENT [%u]: %s\r\n",
                            (unsigned)code, msg);
         if (len > 0) {
             hal_uart1_write(buf, (uint16_t)len);
         }
     }
 
-    /* Visual indication: single blink */
+    /* Indication visuelle : clignotement unique */
     blink_led(1, 150);
 }

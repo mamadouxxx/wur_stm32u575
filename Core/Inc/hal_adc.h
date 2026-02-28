@@ -1,11 +1,11 @@
 /**
- * @file hal_adc.h
- * @author Mamadou
- * @date 17 Jan 2026
- * @brief Hardware Abstraction Layer (HAL) for ADC readings
+ * @file    hal_adc.h
+ * @author  Mamadou
+ * @date    17 jan 2026
+ * @brief   Couche d'abstraction matérielle (HAL) pour les lectures ADC
  *
- * Provides functions to read ADC channels, perform calibration,
- * and convert ADC values to illuminance (lux).
+ * Fournit des fonctions pour lire les canaux ADC, effectuer la calibration
+ * et convertir les valeurs ADC en éclairement (lux).
  */
 
 #ifndef HAL_ADC_H_
@@ -18,46 +18,36 @@ extern "C" {
 #include <stdint.h>
 
 /**
- * @brief Read raw value from ADC4
+ * @brief Lit la valeur brute de l'ADC4
  *
- * Starts the ADC conversion, waits for it to complete, and returns the 12-bit result.
- * @return 12-bit ADC value (0..4095)
+ * Démarre la conversion ADC, attend la fin et retourne le résultat sur 12 bits.
+ * @return Valeur ADC sur 12 bits (0..4095)
  */
 uint32_t hal_adc4_read(void);
 
 /**
- * @brief Read raw value from ADC1
+ * @brief Lit la valeur brute de l'ADC1
  *
- * Similar to hal_adc4_read but for ADC1.
- * @return 12-bit ADC value (0..4095)
+ * Identique à hal_adc4_read mais pour l'ADC1.
+ * @return Valeur ADC sur 12 bits (0..4095)
  */
 uint32_t hal_adc1_read(void);
 
 /**
- * @brief Calibrate ADC4
+ * @brief Calibre l'ADC4
  *
- * Starts the offset calibration for ADC4 in single-ended mode.
- * @return Calibration status (0 if successful, otherwise error code)
+ * Lance la calibration d'offset de l'ADC4 en mode single-ended.
+ * @return Statut de calibration (0 si succès, code d'erreur sinon)
  */
 uint32_t hal_adc4_calibration(void);
 
 /**
- * @brief Calibrate ADC1
+ * @brief Calibre l'ADC1
  *
- * Starts the offset calibration for ADC1 in single-ended mode.
- * @return Calibration status (0 if successful, otherwise error code)
+ * Lance la calibration d'offset de l'ADC1 en mode single-ended.
+ * @return Statut de calibration (0 si succès, code d'erreur sinon)
  */
 uint32_t hal_adc1_calibration(void);
-
-/**
- * @brief Convert ADC value to illuminance (lux)
- *
- * Uses a phototransistor model to convert a raw ADC reading into
- * approximate lux value.
- * @param adc_val Raw ADC value
- * @return Calculated illuminance in lux
- */
-float lux_from_adc(uint32_t adc_val);
 
 #ifdef __cplusplus
 }

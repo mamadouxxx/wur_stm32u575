@@ -1,11 +1,11 @@
-/*
- * o2_app.h
+/**
+ * @file    o2_app.h
+ * @author  Mamadou
+ * @date    15 jan 2026
+ * @brief   Module applicatif pour la lecture du capteur d'oxygène
  *
- *  Created on: 15 Jan 2026
- *      Author: Mamadou
- *
- *  Application-level module for reading oxygen sensor via ADC1.
- *  Provides initialization and periodic update of O2 sensor data.
+ * Module de niveau applicatif pour la lecture du capteur O2 via ADC1.
+ * Fournit l'initialisation et la mise à jour périodique des données du capteur O2.
  */
 
 #ifndef O2_APP_H_
@@ -15,20 +15,21 @@
 extern "C" {
 #endif
 
-/* Includes ------------------------------------------------------------------*/
 #include "stm32u5xx_hal.h"
 #include "stm32u5xx_nucleo.h"
 #include <stdint.h>
 
 /**
- * @brief Initialize the O2 sensor module.
- *        Calibrates ADC1 and prepares the sensor for readings.
+ * @brief Initialise le module capteur O2
+ *
+ * Calibre l'ADC1 et prépare le capteur pour les lectures.
  */
 void o2_app_init(void);
 
 /**
- * @brief Periodic task to read O2 sensor values.
- *        Reads the ADC1 value and updates the O2 measurement in sensor data.
+ * @brief Tâche périodique de lecture du capteur O2
+ *
+ * Lit la valeur ADC1 et met à jour la mesure O2 dans les données capteur.
  */
 void o2_app_task(void);
 

@@ -1,12 +1,12 @@
 /**
- * @file rf_ook_proto.h
- * @author Mamadou
- * @date 20 Jan 2026
- * @brief Application layer for OOK 433 MHz protocol.
+ * @file    rf_ook_proto.h
+ * @author  Mamadou
+ * @date    20 jan 2026
+ * @brief   Couche applicative du protocole OOK 433 MHz
  *
- * Provides functions to send and receive OOK frames (SYNC + address + payload)
- * using callbacks for bit-level transmission and microsecond delays.
- * This layer abstracts the hardware layer from the application.
+ * Fournit les fonctions d'envoi et de réception de trames OOK (SYNC + adresse + payload)
+ * via la machine d'état TX et les interruptions timer.
+ * Cette couche abstrait le matériel de l'application.
  */
 
 #ifndef RF_OOK_PROTO_H_
@@ -21,52 +21,52 @@ extern "C" {
 #endif
 
 /**
- * @brief Initialize the OOK protocol module.
+ * @brief Initialise le module protocole OOK
  *
- * Sets up TX and RX modules and prepares the protocol layer
- * for sending and receiving frames.
+ * Configure les modules TX et RX et prépare la couche protocole
+ * pour l'envoi et la réception de trames.
  */
 void rf_ook_proto_init(void);
 
 /**
- * @brief Send a full OOK frame.
+ * @brief Envoie une trame OOK complète
  *
- * Prepares a frame with SYNC, address, and payload, and starts
- * transmission using the TX state machine and timer interrupts.
+ * Prépare une trame avec SYNC, adresse et payload, et démarre
+ * la transmission via la machine d'état TX et les interruptions timer.
  *
- * @param address           Node address (2 bits)
- * @param payload           Pointer to payload data array
- * @param payload_len_bytes Number of bytes in the payload
+ * @param address            Adresse du nœud destinataire (2 bits)
+ * @param payload            Pointeur vers le tableau de données payload
+ * @param payload_len_bytes  Nombre d'octets du payload
  */
 void rf_ook_proto_send_frame(uint8_t address, uint8_t *payload, uint8_t payload_len_bytes);
 
 /**
- * @brief Process received frames from the RX FIFO.
+ * @brief Traite les trames reçues depuis le FIFO RX
  *
- * Can be used to decode, dispatch, or retransmit frames.
+ * Permet de décoder, dispatcher ou retransmettre les trames reçues.
  */
 void rf_ook_proto_handle_received_frame(void);
 
 /**
- * @brief Get a pointer to the current TX frame structure.
+ * @brief Retourne un pointeur vers la structure de trame TX courante
  *
- * Allows checking or modifying the frame state from the application.
+ * Permet de consulter ou modifier l'état de la trame depuis l'application.
  *
- * @return Pointer to the active transmission context
+ * @return Pointeur vers le contexte de transmission actif
  */
 rf_ook_tx_frame_t* rf_ook_proto_get_tx_frame(void);
 
 /**
- * @brief Check if the protocol layer is currently transmitting.
+ * @brief Indique si la couche protocole est en cours de transmission
  *
- * @return true if TX is active, false otherwise
+ * @return true si une transmission est active, false sinon
  */
 bool rf_ook_proto_is_busy(void);
 
 /**
- * @brief Get the node address of this MCU.
+ * @brief Retourne l'adresse du nœud de ce MCU
  *
- * @return Node address as uint8_t (limited by ADDRESS_BITS)
+ * @return Adresse du nœud en uint8_t (limitée par ADDRESS_BITS)
  */
 uint8_t rf_ook_get_node_address(void);
 

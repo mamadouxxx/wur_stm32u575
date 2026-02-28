@@ -65,7 +65,6 @@ TIM_HandleTypeDef htim3;
 UART_HandleTypeDef huart1;
 
 /* USER CODE BEGIN PV */
-volatile bool tx_periodic_flag = false;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -82,11 +81,15 @@ static void MX_TIM1_Init(void);
 static void MX_TIM3_Init(void);
 static void MX_LPTIM1_Init(void);
 /* USER CODE BEGIN PFP */
-
+static void system_clock_restore(void);
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
+
+volatile bool tx_periodic_flag = false;   // LPTIM1
+volatile bool rx_wakeup_flag = false;    // RX_DATA EXTI
+
 static uint8_t payload_len;
 static uint8_t payload[MAX_PAYLOAD_SIZE];
 /* USER CODE END 0 */
@@ -149,51 +152,111 @@ int main(void)
   rf_ook_proto_init();
 
   /* LOW POWER TIMER 1 pour envoie mesures */
-//  HAL_LPTIM_Counter_Start_IT(&hlptim1);
+  HAL_LPTIM_Counter_Start_IT(&hlptim1);
 
-  sensors.co2 = 222;
-  sensors.temp = 567;
-  sensors.hum = 65;
-  sensors.lux = 4096;
-  sensors.o2 = 223;
-  sensors.motion = 0; /* No motion sensor for now */
-
-  memcpy(payload, &sensors, sizeof(sensor_payload_t));
-  payload_len = sizeof(sensor_payload_t);
+  sensor_payload_t sensors;
 
   while (1)
   {
+#ifdef NODE_IS_TRANSMITTER
+	  if (tx_periodic_flag) {
+	      tx_periodic_flag = false;
+
+	      /* lancez les capteurs */
+	      sensors_task();
+
+	      sensors.co2 = sensor_data_get_co2();
+	      sensors.temp = sensor_data_get_temperature();
+	      sensors.hum = sensor_data_get_humidity();
+	      sensors.lux = sensor_data_get_lux();
+	      sensors.o2 = sensor_data_get_o2();
+	      sensors.motion = 0; /* No motion sensor for now */
+
+	      memcpy(payload, &sensors, sizeof(sensor_payload_t));
+	      payload_len = sizeof(sensor_payload_t);
+
+	      telemetry_send_uart();
+
+	      if (!rf_ook_proto_is_busy()) {
+				uint8_t dest_addr = rf_ook_get_node_address();
+	            char msg[] = "TX: Envoi en cours...\r\n";
+	            HAL_UART_Transmit(&huart1, (uint8_t*)msg, strlen(msg), 100);
+	          rf_ook_proto_send_frame(dest_addr, payload, payload_len);
+	      }
+
+	  }
+#else
 	  rf_ook_rx_process_queue();
 	  if (rf_ook_rx_is_frame_ready()) {
 	    	rf_ook_proto_handle_received_frame();
 	  }
+#endif
 
-//	  if (tx_periodic_flag) {
-//	      tx_periodic_flag = false;
+//#ifdef NODE_IS_TRANSMITTER
 //
-//	      /* lancez les capteurs */
-//	      sensors_task();
+//    if (tx_periodic_flag) {
+//        tx_periodic_flag = false;
 //
-//	      sensors.co2 = sensor_data_get_co2();
-//	      sensors.temp = sensor_data_get_temperature();
-//	      sensors.hum = sensor_data_get_humidity();
-//	      sensors.lux = sensor_data_get_lux();
-//	      sensors.o2 = sensor_data_get_o2();
-//	      sensors.motion = 0; /* No motion sensor for now */
+//        sensors_task();
+//        sensors.co2    = sensor_data_get_co2();
+//        sensors.temp   = sensor_data_get_temperature();
+//        sensors.hum    = sensor_data_get_humidity();
+//        sensors.lux    = sensor_data_get_lux();
+//        sensors.o2     = sensor_data_get_o2();
+//        sensors.motion = 0;
 //
-//	      memcpy(payload, &sensors, sizeof(sensor_payload_t));
-//	      payload_len = sizeof(sensor_payload_t);
+//        memcpy(payload, &sensors, sizeof(sensor_payload_t));
+//        payload_len = sizeof(sensor_payload_t);
+//        telemetry_send_uart();
 //
-//	      telemetry_send_uart();
+//        if (!rf_ook_proto_is_busy()) {
+//            char msg[] = "TX: Envoi en cours...\r\n";
+//            HAL_UART_Transmit(&huart1, (uint8_t*)msg, strlen(msg), 100);
+//            rf_ook_proto_send_frame(rf_ook_get_node_address(), payload, payload_len);
+//        }
 //
-//	      if (!rf_ook_proto_is_busy()) {
-//				uint8_t dest_addr = rf_ook_get_node_address();
-//	            char msg[] = "TX: Envoi en cours...\r\n";
-//	            HAL_UART_Transmit(&huart1, (uint8_t*)msg, strlen(msg), 100);
-//	          rf_ook_proto_send_frame(dest_addr, payload, payload_len);
-//	      }
+//        // Attendre fin TX + fin UART avant de dormir
+//        while (rf_ook_proto_is_busy());
+//        while (HAL_UART_GetState(&huart1) != HAL_UART_STATE_READY);
+//    }
+//    // Entrée en Stop2 uniquement si rien n'est actif
+//    if (!rf_ook_proto_is_busy() && HAL_UART_GetState(&huart1) == HAL_UART_STATE_READY)
+//    {
+//    	HAL_SuspendTick();
+//    	HAL_TIM_Base_Stop_IT(&htim1);  // TIM1 TX
 //
-//	  }
+//    	HAL_GPIO_WritePin(LED_BLUE_GPIO_Port, LED_BLUE_Pin, GPIO_PIN_RESET);
+//    	HAL_PWREx_EnterSTOP2Mode(PWR_STOPENTRY_WFI);
+//    	HAL_GPIO_WritePin(LED_BLUE_GPIO_Port, LED_BLUE_Pin, GPIO_PIN_SET);
+//
+//    	HAL_ResumeTick();  // Réactive TIM17
+//    	system_clock_restore();
+//    }
+//
+//#else
+//
+//    if (rx_wakeup_flag) {
+//        rx_wakeup_flag = false;
+//        rf_ook_rx_process_queue();
+//        if (rf_ook_rx_is_frame_ready()) {
+//            rf_ook_proto_handle_received_frame();
+//        }
+//    }
+//
+//    // Entrée en Stop2 si UART libre et rien en attente
+//    if (!rx_wakeup_flag && HAL_UART_GetState(&huart1) == HAL_UART_STATE_READY)
+//    {
+//		HAL_SuspendTick();
+//		HAL_TIM_Base_Stop_IT(&htim1);  // TIM1 TX
+//
+//		HAL_GPIO_WritePin(LED_BLUE_GPIO_Port, LED_BLUE_Pin, GPIO_PIN_RESET);
+//		HAL_PWREx_EnterSTOP2Mode(PWR_STOPENTRY_WFI);
+//		HAL_GPIO_WritePin(LED_BLUE_GPIO_Port, LED_BLUE_Pin, GPIO_PIN_SET);
+//
+//		HAL_ResumeTick();  // Réactive TIM17
+//		system_clock_restore();
+//    }
+//#endif
 
     /* USER CODE END WHILE */
 
@@ -508,7 +571,7 @@ static void MX_LPTIM1_Init(void)
     Error_Handler();
   }
   /* USER CODE BEGIN LPTIM1_Init 2 */
-
+  __HAL_RCC_LPTIM1_CLK_SLEEP_ENABLE();
   /* USER CODE END LPTIM1_Init 2 */
 
 }
@@ -753,7 +816,7 @@ static void MX_GPIO_Init(void)
 
   /*Configure GPIO pin : FLAG_Pin */
   GPIO_InitStruct.Pin = FLAG_Pin;
-  GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
+  GPIO_InitStruct.Mode = GPIO_MODE_IT_RISING;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   HAL_GPIO_Init(FLAG_GPIO_Port, &GPIO_InitStruct);
 
@@ -799,8 +862,11 @@ static void MX_GPIO_Init(void)
   HAL_GPIO_Init(BTN_RECEIVE_TEST_GPIO_Port, &GPIO_InitStruct);
 
   /* EXTI interrupt init*/
-  HAL_NVIC_SetPriority(EXTI6_IRQn, 5, 0);
+  HAL_NVIC_SetPriority(EXTI6_IRQn, 0, 0);
   HAL_NVIC_EnableIRQ(EXTI6_IRQn);
+
+  HAL_NVIC_SetPriority(EXTI12_IRQn, 0, 0);
+  HAL_NVIC_EnableIRQ(EXTI12_IRQn);
 
   HAL_NVIC_SetPriority(EXTI13_IRQn, 0, 0);
   HAL_NVIC_EnableIRQ(EXTI13_IRQn);
@@ -814,6 +880,48 @@ static void MX_GPIO_Init(void)
 }
 
 /* USER CODE BEGIN 4 */
+
+static void system_clock_restore(void)
+{
+    RCC_OscInitTypeDef RCC_OscInitStruct = {0};
+    RCC_OscInitStruct.OscillatorType      = RCC_OSCILLATORTYPE_HSI;
+    RCC_OscInitStruct.HSIState            = RCC_HSI_ON;
+    RCC_OscInitStruct.HSICalibrationValue = RCC_HSICALIBRATION_DEFAULT;
+    RCC_OscInitStruct.PLL.PLLState        = RCC_PLL_NONE;
+    if (HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK)
+    {
+        Error_Handler();
+    }
+
+    // Resélectionne HSI comme SYSCLK
+    RCC_ClkInitTypeDef RCC_ClkInitStruct = {0};
+    RCC_ClkInitStruct.ClockType    = RCC_CLOCKTYPE_HCLK    |
+                                     RCC_CLOCKTYPE_SYSCLK  |
+                                     RCC_CLOCKTYPE_PCLK1   |
+                                     RCC_CLOCKTYPE_PCLK2   |
+                                     RCC_CLOCKTYPE_PCLK3;
+    RCC_ClkInitStruct.SYSCLKSource     = RCC_SYSCLKSOURCE_HSI;
+    RCC_ClkInitStruct.AHBCLKDivider    = RCC_SYSCLK_DIV1;
+    RCC_ClkInitStruct.APB1CLKDivider   = RCC_HCLK_DIV1;
+    RCC_ClkInitStruct.APB2CLKDivider   = RCC_HCLK_DIV1;
+    RCC_ClkInitStruct.APB3CLKDivider   = RCC_HCLK_DIV1;
+    if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_1) != HAL_OK)
+    {
+        Error_Handler();
+    }
+
+    // Réinit périphériques
+    MX_I2C3_Init();
+    MX_USART1_UART_Init();
+    MX_SPI1_Init();
+    MX_ADC1_Init();
+    HAL_ADCEx_Calibration_Start(&hadc1, ADC_CALIB_OFFSET, ADC_SINGLE_ENDED);
+    MX_ADC4_Init();
+    HAL_ADCEx_Calibration_Start(&hadc4, ADC_CALIB_OFFSET, ADC_SINGLE_ENDED);
+
+    // Recaler référence temps RX
+    last_edge_time = TIM3->CNT;
+}
 
 void HAL_GPIO_EXTI_Rising_Callback(uint16_t GPIO_Pin)
 {
@@ -832,6 +940,7 @@ void HAL_GPIO_EXTI_Rising_Callback(uint16_t GPIO_Pin)
 
     if (GPIO_Pin == RX_DATA_Pin)
     {
+    	rx_wakeup_flag = true;
         rf_ook_rx_handle_edge(1);
     }
 }
@@ -839,6 +948,7 @@ void HAL_GPIO_EXTI_Rising_Callback(uint16_t GPIO_Pin)
 void HAL_GPIO_EXTI_Falling_Callback(uint16_t GPIO_Pin)
 {
 	if (GPIO_Pin == RX_DATA_Pin) {
+		rx_wakeup_flag = true;
         rf_ook_rx_handle_edge(0);
 	}
 }
@@ -868,22 +978,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
   rf_ook_tx_frame_t* tx_frame = rf_ook_proto_get_tx_frame();
   if (htim->Instance == TIM1 && tx_frame->active) {
 	  rf_ook_tx_send_bit(tx_frame);
-
-      if (!tx_frame->active) {
-          HAL_GPIO_WritePin(LED_GREEN_GPIO_Port, LED_GREEN_Pin, GPIO_PIN_RESET);
-      }
   }
-
-  // Timer RX OOK
-//  if (htim->Instance == TIM3)
-//  {
-//	  uint8_t bit = HAL_GPIO_ReadPin(RX_DATA_GPIO_Port, RX_DATA_Pin);
-//	  rf_ook_rx_receive_bit(bit);
-//
-//      if (rf_ook_rx_is_frame_ready()) {
-//          HAL_GPIO_WritePin(LED_BLUE_GPIO_Port, LED_BLUE_Pin, GPIO_PIN_RESET);
-//      }
-//  }
 
   /* USER CODE END Callback 0 */
   if (htim->Instance == TIM17)

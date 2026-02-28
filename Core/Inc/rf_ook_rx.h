@@ -1,11 +1,11 @@
 /**
- * @file rf_ook_rx.h
- * @author Mamadou
- * @date 21 Jan 2026
- * @brief RF 433 MHz OOK Receiver module (RX)
+ * @file    rf_ook_rx.h
+ * @author  Mamadou
+ * @date    21 jan 2026
+ * @brief   Module récepteur OOK 433 MHz (RX)
  *
- * Provides a simple FSM to decode OOK-modulated frames
- * (address + payload) and store them in a circular buffer.
+ * Fournit une machine d'état (FSM) pour décoder les trames OOK
+ * (adresse + payload) et les stocker dans un buffer circulaire.
  */
 
 #ifndef RF_OOK_RX_H_
@@ -16,50 +16,72 @@
 #include <stdbool.h>
 #include "main.h"
 
+extern volatile uint32_t last_edge_time; /**< Timestamp (ticks TIM3) du dernier front détecté sur RX_DATA.
+                                              Mis à jour en IRQ EXTI via rf_ook_rx_handle_edge().
+                                              Recaler après Stop2 : last_edge_time = TIM3->CNT. */
+
 /**
- * @brief Initialize the OOK RX module
+ * @brief Initialise le module RX OOK
  *
- * Resets the RX FSM state and clears the RX buffer.
+ * Réinitialise la FSM RX et vide le buffer de réception.
  */
 void rf_ook_rx_init(void);
 
 /**
- * @brief Reset the RX FSM
+ * @brief Réinitialise la FSM RX
  *
- * Clears internal counters and prepares the module to receive a new frame.
+ * Remet les compteurs internes à zéro et prépare le module à recevoir une nouvelle trame.
  */
 void rf_ook_rx_reset(void);
 
 /**
- * @brief Inject a received bit into the RX FSM
+ * @brief Injecte un bit reçu dans la FSM RX
  *
- * This function should be called from an ISR or physical RX module
- * whenever a new bit is received. The FSM automatically updates
- * the address and payload buffers.
+ * À appeler depuis une ISR ou le module RX physique à chaque nouveau bit reçu.
+ * La FSM met automatiquement à jour les buffers d'adresse et de payload.
  *
- * @param bit The received bit (0 or 1)
+ * @param bit  Bit reçu (0 ou 1)
  */
 void rf_ook_rx_receive_bit(uint8_t bit);
 
 /**
- * @brief Read a received frame from the circular RX buffer
+ * @brief Lit une trame reçue depuis le buffer circulaire RX
  *
- * If a frame is available, it is copied to `frame` and removed from the buffer.
+ * Si une trame est disponible, elle est copiée dans @p frame et retirée du buffer.
  *
- * @param frame Pointer to an `rf_ook_frame_t` struct to store the received frame
- * @return 1 if a frame was available and copied, 0 if buffer is empty
+ * @param frame  Pointeur vers une structure rf_ook_frame_t pour stocker la trame reçue
+ * @return 1 si une trame était disponible et a été copiée, 0 si le buffer est vide
  */
 uint8_t rf_ook_rx_get_frame(rf_ook_frame_t *frame);
 
 /**
- * @brief Check if a frame is ready in the RX buffer
+ * @brief Vérifie si une trame est disponible dans le buffer RX
  *
- * @return true if at least one frame is available, false otherwise
+ * @return true si au moins une trame est disponible, false sinon
  */
 bool rf_ook_rx_is_frame_ready(void);
 
+/**
+ * @brief Enregistre un front détecté sur RX_DATA
+ *
+ * À appeler depuis le callback EXTI à chaque front montant ou descendant.
+ *
+ * @param current_level  Niveau logique actuel de la pin RX_DATA (0 ou 1)
+ */
 void rf_ook_rx_handle_edge(uint8_t current_level);
+
+/**
+ * @brief Vérifie si des fronts sont en attente dans la file
+ *
+ * @return true si la file de fronts contient des événements, false sinon
+ */
 bool rf_ook_rx_has_edges(void);
+
+/**
+ * @brief Traite les fronts en attente dans la file et alimente la FSM RX
+ *
+ * À appeler périodiquement dans la boucle principale pour décoder les bits reçus.
+ */
 void rf_ook_rx_process_queue(void);
 
 #endif /* RF_OOK_RX_H_ */

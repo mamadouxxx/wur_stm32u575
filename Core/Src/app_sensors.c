@@ -1,11 +1,11 @@
 /**
- * @file app_sensors.c
- * @author Mamadou
- * @date 15 Jan 2026
- * @brief Implementation of high-level sensor application module
+ * @file    app_sensors.c
+ * @author  Mamadou
+ * @date    15 jan 2026
+ * @brief   Implémentation du module applicatif de gestion des capteurs
  *
- * Orchestrates the initialization and periodic task execution
- * for all actual sensors: SCD30, light sensor, and O2 sensor.
+ * Orchestre l'initialisation et l'exécution périodique des tâches
+ * pour tous les capteurs : SCD30, capteur de luminosité et capteur O2.
  */
 
 #include "app_sensors.h"
@@ -13,24 +13,13 @@
 #include "lux_app.h"
 #include "o2_app.h"
 
-/**
- * @brief Initialize all sensors
- *
- * Calls the initialization routine of each sensor module.
- */
 void sensors_init(void)
 {
     scd30_app_init();
-    // lux_app_init();  // Uncomment for calibrate light sensor is available
-//     o2_app_init();   // Uncomment to calibrate O2 sensor is available
+//    lux_app_init();  // Décommenter quand la calibration du capteur de lumière est disponible
+//    o2_app_init();   // Décommenter quand la calibration du capteur O2 est disponible
 }
 
-/**
- * @brief Execute periodic sensor tasks
- *
- * Calls the task function of each sensor module to read data
- * and perform internal updates.
- */
 void sensors_task(void)
 {
     scd30_app_task();

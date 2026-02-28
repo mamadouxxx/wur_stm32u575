@@ -1,19 +1,20 @@
 /**
- * @file app_sensors.h
- * @author Mamadou
- * @date 15 Jan 2026
- * @brief High-level sensor application module
+ * @file    app_sensors.h
+ * @author  Mamadou
+ * @date    15 jan 2026
+ * @brief   Module applicatif de gestion des capteurs
  *
-*  Application-level module for managing all sensors.
- *  Provides initialization and periodic update tasks for all sensors.
+ * Module de niveau applicatif pour la gestion de l'ensemble des capteurs.
+ * Fournit l'initialisation et les tâches de lecture périodique.
  *
- *  Sensors included:
- *    - SCD30 (CO2, temperature, humidity)
- *    - Lux sensor (via ADC4)
- *    - O2 sensor (via ADC1)
+ * Capteurs inclus :
+ *   - SCD30 (CO2, température, humidité)
+ *   - Capteur de luminosité (via ADC4)
+ *   - Capteur O2 (via ADC1)
  *
- *  This module abstracts individual sensor drivers and offers a single interface
- *  to the application for initialization and periodic reading. */
+ * Ce module abstrait les pilotes individuels et offre une interface unique
+ * à l'application pour l'initialisation et la lecture périodique.
+ */
 
 #ifndef APP_SENSORS_H_
 #define APP_SENSORS_H_
@@ -25,18 +26,18 @@ extern "C" {
 #include "stm32u5xx_hal.h"
 
 /**
- * @brief Initialize all sensors
+ * @brief Initialise tous les capteurs
  *
- * This function initializes each sensor module.
- * Call this once at system startup.
+ * Initialise chaque module capteur.
+ * À appeler une seule fois au démarrage du système.
  */
 void sensors_init(void);
 
 /**
- * @brief Execute sensor tasks
+ * @brief Exécute les tâches de lecture des capteurs
  *
- * This function should be called periodically (e.g., in main loop or scheduler)
- * to read data from sensors and update internal state.
+ * À appeler périodiquement (ex. dans la boucle principale ou un ordonnanceur)
+ * pour lire les données des capteurs et mettre à jour l'état interne.
  */
 void sensors_task(void);
 

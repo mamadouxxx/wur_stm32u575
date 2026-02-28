@@ -1,10 +1,10 @@
 /**
- * @file hal_uart.h
- * @author Mamadou
- * @date 17 Jan 2026
- * @brief Hardware Abstraction Layer (HAL) for UART
+ * @file    hal_uart.h
+ * @author  Mamadou
+ * @date    17 jan 2026
+ * @brief   Couche d'abstraction matérielle (HAL) pour l'UART
  *
- * Provides functions to transmit data over UART1.
+ * Fournit les fonctions de transmission de données via UART1.
  */
 
 #ifndef HAL_UART_H_
@@ -17,12 +17,12 @@ extern "C" {
 #include <stdint.h>
 
 /**
- * @brief Transmit data via UART1
+ * @brief Transmet des données via UART1
  *
- * Sends a buffer of bytes over UART1 using blocking HAL transmission.
+ * Envoie un tampon d'octets sur UART1 en mode bloquant.
  *
- * @param data Pointer to the data buffer
- * @param len Number of bytes to transmit
+ * @param data  Pointeur vers le tampon de données
+ * @param len   Nombre d'octets à transmettre
  */
 void hal_uart1_write(uint8_t* data, uint16_t len);
 

@@ -1,18 +1,18 @@
 /**
  * @file    ad5668_cna.h
- * @brief   AD5668 8-channel DAC (CNA) driver
+ * @brief   Pilote CNA (DAC) AD5668 8 canaux
  * @author  Mamadou
- * @date    January 25, 2026
+ * @date    25 janvier 2026
  *
- * This driver provides a high-level API to control the AD5668 DAC via SPI.
+ * Ce pilote fournit une API haut niveau pour contrôler le DAC AD5668 via SPI.
  *
- * Features:
- *  - SPI communication with AD5668
- *  - Voltage-based and raw code DAC control
- *  - LDAC, CLR, power-down and reset management
- *  - Internal reference control
+ * Fonctionnalités :
+ *  - Communication SPI avec l'AD5668
+ *  - Contrôle du DAC par tension (mV) ou par code brut
+ *  - Gestion du LDAC, CLR, mise en veille et reset
+ *  - Contrôle de la référence de tension interne
  *
- * Designed for low-power embedded systems (e.g. Wake-up Radio projects).
+ * Conçu pour les systèmes embarqués basse consommation (ex. projets Wake-up Radio).
  */
 
 #ifndef AD5668_CNA_H_
@@ -27,113 +27,113 @@ extern "C" {
 #include <stdbool.h>
 
 /**
- * @brief SPI handle used by the AD5668 driver
+ * @brief Handle SPI utilisé par le pilote AD5668
  */
 extern SPI_HandleTypeDef hspi1;
 
-/** @name AD5668 command codes
+/** @name Codes de commande AD5668
  * @{
  */
-#define CNA_CMD_WRITE_INPUT_REG           0 /**< Write to input register */
-#define CNA_CMD_UPDATE_OUTPUT_REG         1 /**< Update DAC output register */
-#define CNA_CMD_WRITE_INPUT_UPDATE_ALL    2 /**< Write and update all channels */
-#define CNA_CMD_WRITE_INPUT_UPDATE_N      3 /**< Write and update selected channel */
-#define CNA_CMD_POWER_DOWN_UP             4 /**< Power-down / power-up command */
-#define CNA_CMD_LOAD_CLEAR_CODE           5 /**< Load clear code register */
-#define CNA_CMD_LOAD_LDAC                 6 /**< Load LDAC register */
-#define CNA_CMD_RESET_POWER_ON            7 /**< Full DAC reset */
-#define CNA_CMD_SETUP_INTERNAL_REF        8 /**< Enable / disable internal reference */
+#define CNA_CMD_WRITE_INPUT_REG           0 /**< Écriture dans le registre d'entrée */
+#define CNA_CMD_UPDATE_OUTPUT_REG         1 /**< Mise à jour du registre de sortie DAC */
+#define CNA_CMD_WRITE_INPUT_UPDATE_ALL    2 /**< Écriture et mise à jour de tous les canaux */
+#define CNA_CMD_WRITE_INPUT_UPDATE_N      3 /**< Écriture et mise à jour du canal sélectionné */
+#define CNA_CMD_POWER_DOWN_UP             4 /**< Commande mise en veille / réveil */
+#define CNA_CMD_LOAD_CLEAR_CODE           5 /**< Chargement du registre de code de remise à zéro */
+#define CNA_CMD_LOAD_LDAC                 6 /**< Chargement du registre LDAC */
+#define CNA_CMD_RESET_POWER_ON            7 /**< Reset complet du DAC */
+#define CNA_CMD_SETUP_INTERNAL_REF        8 /**< Activation / désactivation de la référence interne */
 /** @} */
 
 /**
- * @brief Initialize the AD5668 DAC
+ * @brief Initialise le DAC AD5668
  *
- * This function:
- *  - Resets the DAC using the CLR pin
- *  - Sets LDAC to inactive state
- *  - Loads default voltages on all channels
+ * Cette fonction :
+ *  - Réinitialise le DAC via la broche CLR
+ *  - Met le LDAC en état inactif
+ *  - Charge les tensions par défaut sur tous les canaux
  */
 void cna_init(void);
 
 /**
- * @brief Clear all DAC outputs using the CLR pin
+ * @brief Remet à zéro toutes les sorties DAC via la broche CLR
  */
 void cna_clear(void);
 
 /**
- * @brief Set output voltage on a DAC channel (in millivolts)
+ * @brief Définit la tension de sortie d'un canal DAC (en millivolts)
  *
- * @param channel Channel index (0 to 7)
- * @param voltage_mV Desired output voltage in millivolts
+ * @param channel     Index du canal (0 à 7)
+ * @param voltage_mV  Tension de sortie souhaitée en millivolts
  */
 void cna_set_voltage(uint8_t channel, float voltage_mV);
 
 /**
- * @brief Write a raw 16-bit DAC code to the input register
+ * @brief Écrit un code DAC 16 bits brut dans le registre d'entrée
  *
- * @param channel Channel index (0 to 7)
- * @param code 16-bit DAC value
+ * @param channel  Index du canal (0 à 7)
+ * @param code     Valeur DAC sur 16 bits
  */
 void cna_write_channel(uint8_t channel, uint16_t code);
 
 /**
- * @brief Update the DAC output register of a channel
+ * @brief Met à jour le registre de sortie DAC d'un canal
  *
- * @param channel Channel index (0 to 7)
+ * @param channel  Index du canal (0 à 7)
  */
 void cna_update_channel(uint8_t channel);
 
 /**
- * @brief Write and immediately update a DAC channel
+ * @brief Écrit et met à jour immédiatement un canal DAC
  *
- * @param channel Channel index (0 to 7)
- * @param code 16-bit DAC value
+ * @param channel  Index du canal (0 à 7)
+ * @param code     Valeur DAC sur 16 bits
  */
 void cna_write_update_channel(uint8_t channel, uint16_t code);
 
 /**
- * @brief Write a value and update all DAC outputs
+ * @brief Écrit une valeur et met à jour toutes les sorties DAC
  *
- * @param channel Channel index (ignored by hardware, kept for consistency)
- * @param code 16-bit DAC value
+ * @param channel  Index du canal (ignoré par le matériel, conservé par cohérence)
+ * @param code     Valeur DAC sur 16 bits
  */
 void cna_write_update_all(uint8_t channel, uint16_t code);
 
 /**
- * @brief Power up selected DAC channels
+ * @brief Remet en fonctionnement normal les canaux DAC sélectionnés
  *
- * @param channels Bitmask of channels (bit 0 = channel A, bit 7 = channel H)
+ * @param channels  Masque de bits des canaux (bit 0 = canal A, bit 7 = canal H)
  */
 void cna_power_normal(uint8_t channels);
 
 /**
- * @brief Power down selected DAC channels
+ * @brief Met en veille les canaux DAC sélectionnés
  *
- * @param channels Bitmask of channels (bit 0 = channel A, bit 7 = channel H)
- * @param mode Power-down mode:
- *             - 0: 1kΩ to GND
- *             - 1: 100kΩ to GND
- *             - 2: High impedance (tri-state)
+ * @param channels  Masque de bits des canaux (bit 0 = canal A, bit 7 = canal H)
+ * @param mode      Mode de mise en veille :
+ *                   - 0 : 1kΩ vers GND
+ *                   - 1 : 100kΩ vers GND
+ *                   - 2 : Haute impédance (tri-state)
  */
 void cna_power_down(uint8_t channels, uint8_t mode);
 
 /**
- * @brief Enable the internal voltage reference of the DAC
+ * @brief Active la référence de tension interne du DAC
  */
 void cna_enable_internal_ref(void);
 
 /**
- * @brief Disable the internal voltage reference of the DAC
+ * @brief Désactive la référence de tension interne du DAC
  */
 void cna_disable_internal_ref(void);
 
 /**
- * @brief Perform a full DAC reset (power-on reset state)
+ * @brief Effectue un reset complet du DAC (état de mise sous tension)
  */
 void cna_reset(void);
 
 /**
- * @brief Toggle the LDAC pin to apply pending DAC values
+ * @brief Bascule la broche LDAC pour appliquer les valeurs DAC en attente
  */
 void cna_toggle_ldac(void);
 

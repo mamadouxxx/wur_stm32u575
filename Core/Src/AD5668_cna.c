@@ -20,6 +20,28 @@
 static const float cna_init_voltages[8] = {500, 500, 1200, 250, 250, 800, 500, 400};
 
 /**
+ * @brief Envoie une trame de commande SPI 32 bits au DAC
+ *
+ * @param command   Code de commande AD5668 (voir CNA_CMD_*)
+ * @param channel   Canal DAC ciblé (0 à 7)
+ * @param data      Donnée 16 bits à envoyer
+ * @param function  Champ fonction sur 4 bits
+ */
+static void cna_write_dac(uint8_t command, uint8_t channel, uint16_t data, uint8_t function)
+{
+    uint8_t tx[4];
+
+    tx[0] = command;
+    tx[1] = (channel << 4) | (data >> 12);
+    tx[2] = (data >> 4) & 0xFF;
+    tx[3] = ((data & 0x0F) << 4) | (function & 0x0F);
+
+    HAL_GPIO_WritePin(AD5668_SYNC_GPIO_Port, AD5668_SYNC_Pin, GPIO_PIN_RESET);
+    HAL_SPI_Transmit(&hspi1, tx, 4, 10);
+    HAL_GPIO_WritePin(AD5668_SYNC_GPIO_Port, AD5668_SYNC_Pin, GPIO_PIN_SET);
+}
+
+/**
  * @brief Convert a voltage value (mV) to a 16-bit DAC code
  *
  * @param voltage_mV Input voltage in millivolts
@@ -37,27 +59,6 @@ static uint16_t voltage_to_code(float voltage_mV)
     return (uint16_t)roundf((voltage_mV / CNA_VREF_mV) * CNA_DAC_MAX_CODE);
 }
 
-/**
- * @brief Send a 32-bit SPI command frame to the DAC
- *
- * @param command AD5668 command code
- * @param channel DAC channel
- * @param data 16-bit data payload
- * @param function Lower 4-bit function field
- */
-static void cna_write_dac(uint8_t command, uint8_t channel, uint16_t data, uint8_t function)
-{
-    uint8_t tx[4];
-
-    tx[0] = command;
-    tx[1] = (channel << 4) | (data >> 12);
-    tx[2] = (data >> 4) & 0xFF;
-    tx[3] = ((data & 0x0F) << 4) | (function & 0x0F);
-
-    HAL_GPIO_WritePin(AD5668_SYNC_GPIO_Port, AD5668_SYNC_Pin, GPIO_PIN_RESET);
-    HAL_SPI_Transmit(&hspi1, tx, 4, 10);
-    HAL_GPIO_WritePin(AD5668_SYNC_GPIO_Port, AD5668_SYNC_Pin, GPIO_PIN_SET);
-}
 
 void cna_init(void)
 {

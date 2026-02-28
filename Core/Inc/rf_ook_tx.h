@@ -1,11 +1,11 @@
 /**
- * @file rf_ook_tx.h
- * @author Mamadou
- * @date 19 Jan 2026
- * @brief RF 433 MHz OOK Transmitter module (TX)
+ * @file    rf_ook_tx.h
+ * @author  Mamadou
+ * @date    19 jan 2026
+ * @brief   Module émetteur OOK 433 MHz (TX)
  *
- * Provides functions to transmit bits using On-Off Keying (OOK)
- * modulation and manages frame-level TX states.
+ * Fournit les fonctions de transmission de bits en modulation OOK
+ * et gère les états de transmission au niveau trame.
  */
 
 #ifndef RF_OOK_TX_H_
@@ -20,41 +20,36 @@ extern "C" {
 #include <stdbool.h>
 #include "main.h"
 
-#define WAKEUP_DELAY_US   10000
-
-/** @brief Time to wait after SYNC before sending address (in ticks of BIT_US) */
-#define TX_WAIT_TICKS  (WAKEUP_DELAY_US / BIT_US)
-
 /**
- * @brief Initialize the RF OOK transmitter module.
+ * @brief Initialise le module émetteur OOK
  *
- * Configures GPIOs and prepares the RF hardware.
- * By default, the antenna is set to RX mode.
+ * Configure les GPIO et prépare le matériel RF.
+ * Par défaut, l'antenne est placée en mode réception.
  */
 void rf_ook_tx_init(void);
 
 /**
- * @brief Start an OOK RF transmission.
+ * @brief Démarre une transmission RF OOK
  *
- * Enables the RF TX path and powers on the transmitter.
- * After calling this, bits can be sent using rf_ook_tx_send_bit().
+ * Active la chaîne d'émission RF et met l'émetteur sous tension.
+ * Après cet appel, les bits peuvent être envoyés via rf_ook_tx_send_bit().
  */
 void rf_ook_tx_start_tx(void);
 
 /**
- * @brief End an OOK RF transmission.
+ * @brief Termine une transmission RF OOK
  *
- * Stops any ongoing transmission and powers down the RF TX path.
+ * Arrête toute transmission en cours et met hors tension la chaîne d'émission RF.
  */
 void rf_ook_end_tx(void);
 
 /**
- * @brief Send a single OOK bit using the TX state machine.
+ * @brief Envoie un bit OOK via la machine d'état TX
  *
- * The function automatically selects the correct bit to send
- * depending on the current TX state (SYNC, WAIT, ADDRESS, PAYLOAD).
+ * Sélectionne automatiquement le bit à envoyer selon l'état TX courant
+ * (SYNC, ATTENTE, SRC_ADRESSE, DEST_ADRESSE, PAYLOAD, CRC).
  *
- * @param frame Pointer to the TX frame context
+ * @param frame  Pointeur vers le contexte de trame TX
  */
 void rf_ook_tx_send_bit(rf_ook_tx_frame_t *frame);
 

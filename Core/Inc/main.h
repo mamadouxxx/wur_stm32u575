@@ -78,6 +78,7 @@ void Error_Handler(void);
 #define SPI_MOSI_GPIO_Port GPIOA
 #define FLAG_Pin GPIO_PIN_12
 #define FLAG_GPIO_Port GPIOF
+#define FLAG_EXTI_IRQn EXTI12_IRQn
 #define RX_DATA_Pin GPIO_PIN_13
 #define RX_DATA_GPIO_Port GPIOF
 #define RX_DATA_EXTI_IRQn EXTI13_IRQn
